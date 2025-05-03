@@ -40,7 +40,7 @@ const mockProfessionals: Professional[] = [
   },
   {
     id: 2,
-    name: 'Петр Пидоров',
+    name: 'Петр Пидоров Хуидоров',
     profession: 'Оператор',
     rating: 4.9,
     experience: '8 лет',
