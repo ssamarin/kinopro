@@ -1,6 +1,8 @@
 import React from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import ProfessionalsPage from './pages/ProfessionalsPage';
+import ProfessionalProfile from './components/ProfessionalProfile';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 const theme = createTheme({
   palette: {
@@ -17,7 +19,12 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <ProfessionalsPage />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<ProfessionalsPage />} />
+          <Route path="/professionals/:id" element={<ProfessionalProfile />} />
+        </Routes>
+      </BrowserRouter>
     </ThemeProvider>
   );
 };
