@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
 import FavoritesPage from './pages/FavoritesPage';
 import { FavoritesProvider } from './context/FavoritesContext';
+import { AuthProvider } from './context/AuthContext';
 import ProfessionalDetailPage from './pages/ProfessionalDetailPage';
 
 const theme = createTheme({
@@ -67,18 +68,20 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <FavoritesProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<ProfessionalsPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/favorites" element={<FavoritesPage />} />
-            <Route path="/professionals/:id" element={<ProfessionalDetailPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </BrowserRouter>
-      </FavoritesProvider>
+      <AuthProvider>
+        <FavoritesProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<ProfessionalsPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/professionals/:id" element={<ProfessionalDetailPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </BrowserRouter>
+        </FavoritesProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 };
