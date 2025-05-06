@@ -1,14 +1,26 @@
-import pool from '../db.js';
+import { getDb } from '../db.js';
 
 export async function findUserByEmail(email) {
-  const res = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-  return res.rows[0];
+  try {
+    const db = await getDb();
+    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    return user;
+  } catch (error) {
+    console.error('Ошибка при поиске пользователя:', error);
+    throw error;
+  }
 }
 
 export async function createUser(email, passwordHash) {
-  const res = await pool.query(
-    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING *',
-    [email, passwordHash]
-  );
-  return res.rows[0];
+  try {
+    const db = await getDb();
+    const result = await db.run(
+      'INSERT INTO users (email, password_hash) VALUES (?, ?)',
+      [email, passwordHash]
+    );
+    return { id: result.lastID, email };
+  } catch (error) {
+    console.error('Ошибка при создании пользователя:', error);
+    throw error;
+  }
 }

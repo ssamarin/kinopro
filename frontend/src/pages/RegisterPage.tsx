@@ -6,6 +6,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +16,7 @@ const RegisterPage: React.FC = () => {
   const [password2, setPassword2] = useState('');
   const [msg, setMsg] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +32,17 @@ const RegisterPage: React.FC = () => {
         body: JSON.stringify({ email, password })
       });
       if (res.ok) {
-        setMsg('Регистрация успешна!');
-        setTimeout(() => navigate('/login'), 1000);
+        const data = await res.json();
+        if (data.token) {
+          // Если API возвращает токен при регистрации, используем его для автоматического входа
+          login(data.token, { email });
+          setMsg('Регистрация успешна!');
+          setTimeout(() => navigate('/'), 1000);
+        } else {
+          // Если API не возвращает токен, просто перенаправляем на страницу входа
+          setMsg('Регистрация успешна!');
+          setTimeout(() => navigate('/login'), 1000);
+        }
       } else {
         const data = await res.json();
         setMsg(data.error || 'Ошибка регистрации');
