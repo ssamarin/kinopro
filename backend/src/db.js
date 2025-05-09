@@ -23,7 +23,37 @@ export async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL
-    )
+    );
+
+    CREATE TABLE IF NOT EXISTS cities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      city TEXT UNIQUE NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS profession_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS professions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL,
+      name TEXT UNIQUE NOT NULL,
+      FOREIGN KEY (group_id) REFERENCES profession_groups(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS resumes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_user_id INTEGER NOT NULL,
+      professions_id INTEGER NOT NULL,
+      city_id INTEGER NOT NULL,
+      biography TEXT,
+      media_url TEXT,
+      feedback_ids TEXT,
+      FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (city_id) REFERENCES cities(id) ON DELETE RESTRICT,
+      FOREIGN KEY (professions_id) REFERENCES professions(id) ON DELETE RESTRICT
+    );
   `);
   console.log('База данных SQLite инициализирована');
   return db;
