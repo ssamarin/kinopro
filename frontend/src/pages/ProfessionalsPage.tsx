@@ -1,66 +1,15 @@
-import React, { useState, useMemo } from 'react';
-import { Container, Box, Typography, Paper } from '@mui/material';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Container, Box, Typography, Paper, CircularProgress, Alert } from '@mui/material';
 import Header from '../components/Header';
 import NowInCinemaSlider from '../components/NowInCinemaSlider';
 import SearchAndFilters from '../components/SearchAndFilters';
 import ProfessionalsList from '../components/ProfessionalsList';
-
-const photoUrl = 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg';
-
-const names = [
-  'Иван Петров', 'Анна Сидорова', 'Петр Иванов', 'Мария Смирнова', 'Алексей Кузнецов',
-  'Екатерина Орлова', 'Дмитрий Волков', 'Ольга Павлова', 'Сергей Морозов', 'Наталья Федорова',
-  'Владимир Соколов', 'Елена Васильева', 'Артем Попов', 'Татьяна Лебедева', 'Максим Новиков',
-  'София Михайлова', 'Игорь Захаров', 'Алиса Белова', 'Роман Киселев', 'Вера Громова',
-  'Георгий Котов', 'Дарья Крылова', 'Виктор Белов', 'Юлия Соловьева', 'Андрей Ефимов',
-  'Ксения Климова', 'Глеб Соловьев', 'Полина Кузьмина', 'Виталий Гаврилов', 'Лидия Ковалева',
-  'Валерий Денисов', 'Маргарита Сорокина', 'Евгений Куликов', 'Анастасия Баранова', 'Павел Гусев',
-  'Людмила Киселева', 'Вячеслав Козлов', 'Ирина Кузнецова', 'Василий Орлов', 'Марина Сидорова',
-  'Григорий Павлов', 'Елизавета Морозова', 'Аркадий Фролов', 'Олеся Соколова', 'Денис Кузьмин',
-  'Светлана Громова', 'Антон Котов', 'Валентина Крылова', 'Михаил Белов', 'Евгения Соловьева',
-];
-const professions = ['Актер', 'Режиссер', 'Продюсер', 'Оператор', 'Гример', 'Сценарист', 'Монтажер', 'Кастинг-директор'];
-const locations = ['Москва', 'Санкт-Петербург', 'Казань', 'Новосибирск', 'Екатеринбург', 'Сочи', 'Ростов-на-Дону', 'Воронеж'];
-
-function randomFromArray<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomRating() {
-  return +(Math.random() * 2 + 3).toFixed(1); // 3.0 - 5.0
-}
-
-function randomExperience() {
-  const years = Math.floor(Math.random() * 20) + 1;
-  if (years < 3) return `${years} год${years === 1 ? '' : 'а'}`;
-  if (years < 5) return `${years} года`;
-  return `${years} лет`;
-}
-
-export const mockProfessionals = [
-  {
-    id: 999,
-    name: 'Тимур Бабенко',
-    profession: 'Оператор',
-    rating: 4.8,
-    experience: '8 лет',
-    location: 'Москва',
-    photo: 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg',
-  },
-  ...Array.from({ length: 120 }).map((_, i) => ({
-    id: i + 1,
-    name: randomFromArray(names),
-    profession: randomFromArray(professions),
-    rating: randomRating(),
-    experience: randomExperience(),
-    location: randomFromArray(locations),
-    photo: photoUrl,
-  }))
-];
+import { Professional } from '../components/ProfessionalCard';
 
 const ProfessionalsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
+    professionGroup: '',
     profession: '',
     experience: '',
     location: '',
@@ -69,12 +18,41 @@ const ProfessionalsPage: React.FC = () => {
     onlyWithPhoto: false,
     onlyWithReviews: false,
   });
+  
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  // Загрузка специалистов из БД
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      setLoading(true);
+      setError('');
+      
+      try {
+        const response = await fetch('/api/professionals');
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить список специалистов');
+        }
+        
+        const data = await response.json();
+        setProfessionals(data);
+      } catch (err) {
+        console.error('Ошибка при загрузке специалистов:', err);
+        setError('Произошла ошибка при загрузке данных. Пожалуйста, попробуйте позже.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProfessionals();
+  }, []);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
 
-  const handleFilterChange = (filter: string, value: string | boolean) => {
+  const handleFilterChange = (filter: string, value: any) => {
     setFilters((prev) => ({
       ...prev,
       [filter]: value,
@@ -82,27 +60,57 @@ const ProfessionalsPage: React.FC = () => {
   };
 
   const filteredProfessionals = useMemo(() => {
-    return mockProfessionals.filter((pro) => {
+    return professionals.filter((pro) => {
       // Поиск по имени или профессии
       const search = searchQuery.trim().toLowerCase();
       if (search && !(
         pro.name.toLowerCase().includes(search) ||
         pro.profession.toLowerCase().includes(search)
       )) return false;
+      
+      // Фильтр по группе профессий
+      if (filters.professionGroup && Number(pro.professionGroupId) !== Number(filters.professionGroup)) return false;
+      
       // Фильтр по профессии
-      if (filters.profession && pro.profession !== filters.profession) return false;
+      if (filters.profession && Number(pro.professionId) !== Number(filters.profession)) return false;
+      
       // Фильтр по городу
-      if (filters.location && pro.location !== filters.location) return false;
+      if (filters.location && Number(pro.cityId) !== Number(filters.location)) return false;
+      
+      // Фильтр по опыту (преобразуем строку вида "X лет/года" в число)
+      if (filters.experience) {
+        const minExperience = parseInt(filters.experience as string);
+        const proExperience = parseInt(pro.experience.split(' ')[0]);
+        if (proExperience < minExperience) return false;
+      }
+      
       // Фильтр по рейтингу
-      if (filters.ratingFrom && pro.rating < Number(filters.ratingFrom)) return false;
-      if (filters.ratingTo && pro.rating > Number(filters.ratingTo)) return false;
-      // Фильтр по фото (в демо всегда true)
+      if (filters.ratingFrom) {
+        const minRating = Number(filters.ratingFrom);
+        // Если минимальный рейтинг > 0, исключаем карточки с null или 0 рейтингом
+        if (minRating > 0 && (pro.rating === null || pro.rating === 0)) {
+          return false;
+        }
+        // Проверяем нижнюю границу рейтинга (только для не-null значений)
+        if (pro.rating !== null && pro.rating < minRating) {
+          return false;
+        }
+      }
+      
+      // Проверяем верхнюю границу рейтинга
+      if (filters.ratingTo && pro.rating !== null && pro.rating > Number(filters.ratingTo)) {
+        return false;
+      }
+      
+      // Фильтр по фото
       if (filters.onlyWithPhoto && !pro.photo) return false;
-      // Фильтр по отзывам (в демо всегда true)
-      if (filters.onlyWithReviews) return false; // нет отзывов в демо
+      
+      // Фильтр по отзывам
+      if (filters.onlyWithReviews && !pro.hasFeedback) return false;
+      
       return true;
     });
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, professionals]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -139,7 +147,28 @@ const ProfessionalsPage: React.FC = () => {
             onFilterChange={handleFilterChange}
           />
         </Paper>
-        <ProfessionalsList allProfessionals={filteredProfessionals} />
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            {filteredProfessionals.length === 0 ? (
+              <Alert severity="info">
+                По вашему запросу не найдено ни одного специалиста
+              </Alert>
+            ) : (
+              <ProfessionalsList allProfessionals={filteredProfessionals} />
+            )}
+          </>
+        )}
       </Container>
     </Box>
   );

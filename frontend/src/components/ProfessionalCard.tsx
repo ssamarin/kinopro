@@ -16,14 +16,21 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useFavorites } from '../context/FavoritesContext';
 import { useNavigate } from 'react-router-dom';
 
-interface Professional {
+export interface Professional {
   id: number;
+  userId: number;
   name: string;
   profession: string;
-  rating: number;
+  professionId: number;
+  professionGroup: string;
+  professionGroupId: number;
+  rating: number | null;
   experience: string;
   location: string;
-  photo: string;
+  cityId: number;
+  photo: string | null;
+  biography: string;
+  hasFeedback: boolean;
 }
 
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -103,6 +110,18 @@ const professionColors: Record<string, string> = {
   'Кастинг-директор': '#EF4444', // красный
 };
 
+// Цвета для групп профессий
+const groupColors: Record<string, string> = {
+  'Режиссерский цех': '#3C5BC4',
+  'Актерский цех': '#7C5DC9',
+  'Продюсерский цех': '#22C55E',
+  'Операторский цех': '#06B6D4',
+  'Гримерный цех': '#F472B6',
+  'Монтажный цех': '#F59E42',
+  'Сценарный цех': '#FFD600',
+  'Кастинг': '#EF4444',
+};
+
 const ProfessionalCard: React.FC<{ professional: Professional }> = ({ professional }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const navigate = useNavigate();
@@ -111,9 +130,22 @@ const ProfessionalCard: React.FC<{ professional: Professional }> = ({ profession
     navigate(`/professionals/${professional.id}`);
   };
 
+  // Определяем цвет для профессии или используем цвет группы
+  const getProfessionColor = () => {
+    return professionColors[professional.profession] || 
+           groupColors[professional.professionGroup] ||
+           '#27272a';
+  };
+
+  // Значение вместо отсутствующего рейтинга
+  const ratingDisplay = professional.rating !== null ? professional.rating : '—';
+
+  // Фото по умолчанию, если нет фото
+  const photoUrl = professional.photo || 'https://via.placeholder.com/80x100?text=No+Photo';
+
   return (
     <StyledCard>
-      <PhotoBox style={{ backgroundImage: `url(${professional.photo})` }} />
+      <PhotoBox style={{ backgroundImage: `url(${photoUrl})` }} />
       <ContentBox>
         <TopRow>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 17, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -138,13 +170,13 @@ const ProfessionalCard: React.FC<{ professional: Professional }> = ({ profession
           <Chip
             label={professional.profession}
             sx={{
-              bgcolor: professionColors[professional.profession] || '#27272a',
+              bgcolor: getProfessionColor(),
               color: '#fff',
               fontWeight: 600,
               height: 28,
               fontSize: 15,
               pl: 0.5,
-              boxShadow: `0 2px 8px 0 ${professionColors[professional.profession] || '#000'}22`,
+              boxShadow: `0 2px 8px 0 ${getProfessionColor()}22`,
               textTransform: 'capitalize',
               mb: 0.5,
               mt: 0.5,
@@ -159,8 +191,8 @@ const ProfessionalCard: React.FC<{ professional: Professional }> = ({ profession
         </Typography>
         <InfoRow>
           <Chip
-            icon={<StarIcon sx={{ color: '#fbbf24', fontSize: 18 }} />}
-            label={professional.rating}
+            icon={<StarIcon sx={{ color: professional.rating !== null ? '#fbbf24' : '#a1a1aa', fontSize: 18 }} />}
+            label={ratingDisplay}
             sx={{ bgcolor: '#27272a', color: '#fff', fontWeight: 600, height: 28, fontSize: 15, pl: 0.5 }}
             size="small"
           />

@@ -1,19 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import ProfessionalCard from './ProfessionalCard';
-
-interface Professional {
-  id: number;
-  name: string;
-  profession: string;
-  rating: number;
-  experience: string;
-  location: string;
-  photo: string;
-}
+import ProfessionalCard, { Professional as ProfessionalCardType } from './ProfessionalCard';
 
 interface ProfessionalsListProps {
-  allProfessionals: Professional[];
+  allProfessionals: ProfessionalCardType[];
 }
 
 const PAGE_SIZE = 20;

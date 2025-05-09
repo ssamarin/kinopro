@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, Box, Button, IconButton, Chip, Menu, MenuItem } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box, Button, IconButton, Chip, Menu, MenuItem, Avatar } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import MovieIcon from '@mui/icons-material/Movie';
 import PersonIcon from '@mui/icons-material/Person';
@@ -8,8 +8,8 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import Badge from '@mui/material/Badge';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
+import EditIcon from '@mui/icons-material/Edit';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor: '#18181b',
@@ -55,8 +55,30 @@ const Header: React.FC = () => {
 
   // Функция для получения имени пользователя без @
   const getUserDisplayName = () => {
-    if (!user || !user.email) return '';
-    return user.email.split('@')[0];
+    if (!user) return '';
+    
+    // Если есть firstName, используем его
+    if (user.firstName) {
+      return user.firstName;
+    }
+    
+    // Иначе используем имя из email (как было раньше)
+    if (user.email) {
+      return user.email.split('@')[0];
+    }
+    
+    return '';
+  };
+
+  // Функция для получения первой буквы имени для аватара
+  const getAvatarLetter = () => {
+    if (user?.firstName) {
+      return user.firstName.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U'; // User (по умолчанию)
   };
 
   return (
@@ -87,17 +109,35 @@ const Header: React.FC = () => {
           {isAuthenticated && user ? (
             <>
               <Chip
-                icon={<AccountCircleIcon />}
+                avatar={
+                  <Avatar 
+                    sx={{ 
+                      bgcolor: 'primary.main',
+                      fontWeight: 'bold',
+                      width: 28,
+                      height: 28
+                    }}
+                  >
+                    {getAvatarLetter()}
+                  </Avatar>
+                }
                 label={getUserDisplayName()}
                 color="primary"
                 onClick={handleClick}
                 sx={{ 
                   fontWeight: 600, 
-                  fontSize: '0.9rem',
+                  fontSize: '0.95rem',
+                  borderRadius: '16px',
+                  padding: '4px 2px',
+                  backgroundColor: 'rgba(91,60,196,0.15)',
                   '&:hover': { 
-                    backgroundColor: 'rgba(91,60,196,0.2)',
-                    cursor: 'pointer' 
-                  } 
+                    backgroundColor: 'rgba(91,60,196,0.25)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 2px 8px rgba(91,60,196,0.25)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease-in-out'
+                  },
+                  transition: 'all 0.2s ease-in-out'
                 }}
               />
               <Menu
@@ -107,7 +147,53 @@ const Header: React.FC = () => {
                 MenuListProps={{
                   'aria-labelledby': 'user-menu-button',
                 }}
+                PaperProps={{
+                  sx: {
+                    mt: 1.5,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    borderRadius: '12px',
+                    minWidth: '200px'
+                  },
+                  elevation: 3
+                }}
+                TransitionProps={{
+                  style: { 
+                    transformOrigin: 'top right'
+                  }
+                }}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
               >
+                {(user?.firstName || user?.lastName) && (
+                  <Box sx={{ 
+                    px: 2, 
+                    py: 1, 
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    mb: 1
+                  }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {`${user?.firstName || ''} ${user?.lastName || ''}`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                      {user?.email}
+                    </Typography>
+                  </Box>
+                )}
+                <MenuItem 
+                  component={RouterLink} 
+                  to="/profile" 
+                  onClick={handleClose}
+                >
+                  <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                  Мой профиль
+                </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
                   Выйти

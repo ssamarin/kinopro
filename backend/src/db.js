@@ -22,7 +22,9 @@ export async function initDb() {
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL
+      password_hash TEXT NOT NULL,
+      first_name TEXT,
+      last_name TEXT
     );
 
     CREATE TABLE IF NOT EXISTS cities (
@@ -50,6 +52,7 @@ export async function initDb() {
       biography TEXT,
       media_url TEXT,
       feedback_ids TEXT,
+      since TEXT,
       FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (city_id) REFERENCES cities(id) ON DELETE RESTRICT,
       FOREIGN KEY (professions_id) REFERENCES professions(id) ON DELETE RESTRICT

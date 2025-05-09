@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -9,13 +9,40 @@ import {
   Button,
   Stack,
   Slider,
-  Typography
+  Typography,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Collapse,
+  InputAdornment,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { styled } from '@mui/material/styles';
 
 interface Option {
   label: string;
+}
+
+interface City {
+  id: number;
+  city: string;
+}
+
+interface ProfessionGroup {
+  id: number;
+  name: string;
+}
+
+interface Profession {
+  id: number;
+  group_id: number;
+  name: string;
 }
 
 const professions: Option[] = [
@@ -277,17 +304,18 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
 
 interface SearchAndFiltersProps {
   searchQuery: string;
-  onSearchChange: (value: string) => void;
+  onSearchChange: (query: string) => void;
   filters: {
-    profession: string;
+    professionGroup: string | number;
+    profession: string | number;
     experience: string;
-    location: string;
-    ratingFrom?: string;
-    ratingTo?: string;
-    onlyWithPhoto?: boolean;
-    onlyWithReviews?: boolean;
+    location: string | number;
+    ratingFrom: string;
+    ratingTo: string;
+    onlyWithPhoto: boolean;
+    onlyWithReviews: boolean;
   };
-  onFilterChange: (filter: string, value: string | boolean) => void;
+  onFilterChange: (filter: string, value: any) => void;
 }
 
 const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
@@ -296,102 +324,331 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
   filters,
   onFilterChange,
 }) => {
-  // Для Range Slider
-  const ratingRange: [number, number] = [
-    filters.ratingFrom ? Number(filters.ratingFrom) : 0,
-    filters.ratingTo ? Number(filters.ratingTo) : 5,
-  ];
+  const [showFilters, setShowFilters] = useState(false);
+  const [cities, setCities] = useState<City[]>([]);
+  const [professionGroups, setProfessionGroups] = useState<ProfessionGroup[]>([]);
+  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [filteredProfessions, setFilteredProfessions] = useState<Profession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleRatingChange = (_: Event, newValue: number | number[]) => {
+  // Загрузка данных из БД
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError('');
+      
+      try {
+        // Загружаем города
+        const citiesResponse = await fetch('/api/cities');
+        if (!citiesResponse.ok) throw new Error('Не удалось загрузить список городов');
+        const citiesData = await citiesResponse.json();
+        setCities(citiesData);
+        
+        // Загружаем группы профессий
+        const groupsResponse = await fetch('/api/profession-groups');
+        if (!groupsResponse.ok) throw new Error('Не удалось загрузить группы профессий');
+        const groupsData = await groupsResponse.json();
+        setProfessionGroups(groupsData);
+        
+        // Загружаем профессии
+        const professionsResponse = await fetch('/api/professions');
+        if (!professionsResponse.ok) throw new Error('Не удалось загрузить профессии');
+        const professionsData = await professionsResponse.json();
+        setProfessions(professionsData);
+      } catch (err) {
+        console.error('Ошибка при загрузке данных для фильтров:', err);
+        setError('Не удалось загрузить данные для фильтров');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  // Фильтрация профессий при изменении группы
+  useEffect(() => {
+    if (filters.professionGroup) {
+      const filtered = professions.filter(p => p.group_id === filters.professionGroup);
+      setFilteredProfessions(filtered);
+      
+      // Сбросить выбранную профессию, если она не из текущей группы
+      const professionExists = filtered.some(p => p.id === filters.profession);
+      if (!professionExists) {
+        onFilterChange('profession', '');
+      }
+    } else {
+      setFilteredProfessions([]);
+      onFilterChange('profession', '');
+    }
+  }, [filters.professionGroup, professions]);
+
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  const handleRatingChange = (event: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue)) {
-      onFilterChange('ratingFrom', String(newValue[0]));
-      onFilterChange('ratingTo', String(newValue[1]));
+      onFilterChange('ratingFrom', newValue[0].toString());
+      onFilterChange('ratingTo', newValue[1].toString());
     }
   };
 
+  const ratingValue = [
+    Number(filters.ratingFrom || 0),
+    Number(filters.ratingTo || 5),
+  ];
+
   return (
-    <StyledPaper elevation={0}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', mb: 2 }}>
-        <Box sx={{ flex: '1 1 260px', minWidth: 220 }}>
-          <StyledTextField
-            fullWidth
-            variant="outlined"
-            placeholder="Поиск по имени или профессии"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
-            }}
-          />
-        </Box>
-        <Box sx={{ flex: '1 1 220px', minWidth: 180 }}>
-          <ProfessionAutocomplete
-            options={professions}
-            getOptionLabel={(option: any) => option.label}
-            value={professions.find((p) => p.label === filters.profession) || null}
-            onChange={(_, value) => onFilterChange('profession', (value as Option)?.label || '')}
-            renderInput={(params) => (
-              <StyledTextField {...params} label="Профессия" variant="outlined" />
-            )}
-            isOptionEqualToValue={(option: any, value: any) => option.label === value.label}
-            noOptionsText="Нет подходящих профессий"
-          />
-        </Box>
-        <Box sx={{ flex: '1 1 220px', minWidth: 180 }}>
-          <CityAutocomplete
-            options={locations}
-            getOptionLabel={(option: any) => option.label}
-            value={locations.find((l) => l.label === filters.location) || null}
-            onChange={(_, value) => onFilterChange('location', (value as Option)?.label || '')}
-            renderInput={(params) => (
-              <StyledTextField {...params} label="Город" variant="outlined" />
-            )}
-            isOptionEqualToValue={(option: any, value: any) => option.label === value.label}
-            noOptionsText="Нет подходящих городов"
-          />
-        </Box>
-      </Box>
-      <Box sx={{ px: 2, py: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 18 }}>
-            Рейтинг: <b>{ratingRange[0].toFixed(1)}</b> — <b>{ratingRange[1].toFixed(1)}</b>
-          </Typography>
-        </Box>
-        <ColoredSlider
-          value={ratingRange}
-          min={0}
-          max={5}
-          step={0.1}
-          onChange={handleRatingChange}
-          valueLabelDisplay="auto"
-          marks={[]}
+    <Box>
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Поиск специалиста по имени или профессии"
+          variant="outlined"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="primary" />
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: 3,
+              bgcolor: 'background.paper',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'divider',
+              },
+            },
+          }}
         />
       </Box>
-      <Stack direction="row" spacing={2} alignItems="center">
-        <FormControlLabel
-          control={
-            <StyledCheckbox
-              checked={!!filters.onlyWithPhoto}
-              onChange={(_, checked) => onFilterChange('onlyWithPhoto', checked)}
+
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 1,
+        }}
+      >
+        <Button
+          startIcon={<FilterListIcon />}
+          endIcon={showFilters ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          onClick={toggleFilters}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            '&:hover': { bgcolor: 'transparent', color: 'primary.main' },
+          }}
+        >
+          Фильтры
+        </Button>
+      </Box>
+
+      <Collapse in={showFilters}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 2,
+          mt: 2,
+          alignItems: 'flex-start'
+        }}>
+          <Box sx={{ minWidth: '180px', flexGrow: 1, maxWidth: '250px' }}>
+            <FormControl size="small" sx={{ width: '100%' }}>
+              <InputLabel>Группа профессий</InputLabel>
+              <Select
+                value={filters.professionGroup}
+                onChange={(e) => onFilterChange('professionGroup', e.target.value)}
+                label="Группа профессий"
+                sx={{
+                  borderRadius: '8px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  }
+                }}
+              >
+                <MenuItem value="">Все группы</MenuItem>
+                {professionGroups.map((group) => (
+                  <MenuItem key={group.id} value={group.id}>
+                    {group.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
+          <Box sx={{ minWidth: '180px', flexGrow: 1, maxWidth: '250px' }}>
+            <FormControl size="small" disabled={!filters.professionGroup} sx={{ width: '100%' }}>
+              <InputLabel>Профессия</InputLabel>
+              <Select
+                value={filters.profession}
+                onChange={(e) => onFilterChange('profession', e.target.value)}
+                label="Профессия"
+                sx={{
+                  borderRadius: '8px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  }
+                }}
+              >
+                <MenuItem value="">Все профессии</MenuItem>
+                {filteredProfessions.map((profession) => (
+                  <MenuItem key={profession.id} value={profession.id}>
+                    {profession.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box sx={{ minWidth: '150px', flexGrow: 1, maxWidth: '220px' }}>
+            <FormControl size="small" sx={{ width: '100%' }}>
+              <InputLabel>Город</InputLabel>
+              <Select
+                value={filters.location}
+                onChange={(e) => onFilterChange('location', e.target.value)}
+                label="Город"
+                sx={{
+                  borderRadius: '8px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  }
+                }}
+              >
+                <MenuItem value="">Все города</MenuItem>
+                {cities.map((city) => (
+                  <MenuItem key={city.id} value={city.id}>
+                    {city.city}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box sx={{ minWidth: '150px', flexGrow: 1, maxWidth: '200px' }}>
+            <FormControl size="small" sx={{ width: '100%' }}>
+              <InputLabel>Опыт работы</InputLabel>
+              <Select
+                value={filters.experience}
+                onChange={(e) => onFilterChange('experience', e.target.value)}
+                label="Опыт работы"
+                sx={{
+                  borderRadius: '8px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  }
+                }}
+              >
+                <MenuItem value="">Любой опыт</MenuItem>
+                <MenuItem value="1">От 1 года</MenuItem>
+                <MenuItem value="3">От 3 лет</MenuItem>
+                <MenuItem value="5">От 5 лет</MenuItem>
+                <MenuItem value="10">От 10 лет</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box sx={{ width: '100%', mt: 1, mb: 1, px: 1 }}>
+            <Typography gutterBottom fontWeight="medium">Рейтинг</Typography>
+            <Box sx={{ px: 1 }}>
+              <Slider
+                value={ratingValue}
+                onChange={handleRatingChange}
+                valueLabelDisplay="auto"
+                min={0}
+                max={5}
+                step={0.5}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 5, label: '5' },
+                ]}
+                sx={{
+                  '& .MuiSlider-thumb': {
+                    height: 20,
+                    width: 20,
+                  },
+                  '& .MuiSlider-track': {
+                    height: 8,
+                  },
+                  '& .MuiSlider-rail': {
+                    height: 8,
+                  }
+                }}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mt: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={filters.onlyWithPhoto}
+                  onChange={(e) => onFilterChange('onlyWithPhoto', e.target.checked)}
+                  sx={{
+                    color: 'primary.main',
+                    '&.Mui-checked': {
+                      color: 'primary.main',
+                    }
+                  }}
+                />
+              }
+              label="Только с фото"
+              sx={{ 
+                fontWeight: filters.onlyWithPhoto ? 'medium' : 'normal',
+                userSelect: 'none'
+              }}
             />
-          }
-          label="Только с фото"
-        />
-        <FormControlLabel
-          control={
-            <StyledCheckbox
-              checked={!!filters.onlyWithReviews}
-              onChange={(_, checked) => onFilterChange('onlyWithReviews', checked)}
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={filters.onlyWithReviews}
+                  onChange={(e) => onFilterChange('onlyWithReviews', e.target.checked)}
+                  sx={{
+                    color: 'primary.main',
+                    '&.Mui-checked': {
+                      color: 'primary.main',
+                    }
+                  }}
+                />
+              }
+              label="Только с отзывами"
+              sx={{ 
+                fontWeight: filters.onlyWithReviews ? 'medium' : 'normal',
+                userSelect: 'none'
+              }}
             />
-          }
-          label="Только с отзывами"
-        />
-        <Box sx={{ flexGrow: 1 }} />
-        <StyledButton variant="contained" size="large" fullWidth={false}>
-          Показать
-        </StyledButton>
-      </Stack>
-    </StyledPaper>
+          </Box>
+        </Box>
+      </Collapse>
+    </Box>
   );
 };
 

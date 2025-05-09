@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
+  id: number;
   email: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 interface AuthContextType {
@@ -9,6 +12,7 @@ interface AuthContextType {
   user: User | null;
   login: (token: string, userData: User) => void;
   logout: () => void;
+  updateUserProfile: (firstName: string, lastName: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,9 +57,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     setUser(null);
   };
+  
+  const updateUserProfile = (firstName: string, lastName: string) => {
+    if (user) {
+      const updatedUser = { ...user, firstName, lastName };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
