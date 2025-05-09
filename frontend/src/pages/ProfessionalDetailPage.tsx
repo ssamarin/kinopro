@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Container, Typography, IconButton, Button, Tabs, Tab } from '@mui/material';
+import { Box, Container, Typography, IconButton, Button, Tabs, Tab, CircularProgress, Alert } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
@@ -8,8 +8,8 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import MessageIcon from '@mui/icons-material/Message';
 import CloseIcon from '@mui/icons-material/Close';
-import { mockProfessionals } from './ProfessionalsPage';
 import { useFavorites } from '../context/FavoritesContext';
+import { Professional } from '../components/ProfessionalCard';
 
 // Определим интерфейс для профессионала
 interface ProfessionalDetail {
@@ -307,29 +307,64 @@ const ProfessionalDetailPage = () => {
   const [chats, setChats] = useState<Chat[]>(mockChats);
   const [activeChatId, setActiveChatId] = useState<number>(mockChats[0].id);
   const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (id) {
-      if (id === 'timur-babenko') {
-        setProfessional({
-          id: 999,
-          name: 'Тимур Бабенко',
-          profession: 'Оператор',
-          rating: 4.8,
-          experience: '8 лет',
-          location: 'Москва',
-          photo: 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg',
-          bio: 'Профессиональный оператор с опытом работы более 8 лет. Специализируюсь на съемках художественных фильмов и рекламных роликов. Работал на проектах для крупных брендов.'
-        });
-      } else {
-        const found = mockProfessionals.find(p => p.id === Number(id));
-        if (found) {
-          setProfessional({
-            ...found,
-            bio: 'Профессиональный специалист с большим опытом работы в киноиндустрии. Принимал участие в создании известных проектов.'
-          });
+      const fetchProfessional = async () => {
+        setLoading(true);
+        setError('');
+        
+        try {
+          // Обрабатываем особый случай с Тимуром Бабенко
+          if (id === 'timur-babenko') {
+            setProfessional({
+              id: 999,
+              name: 'Тимур Бабенко',
+              profession: 'Оператор',
+              rating: 4.8,
+              experience: '8 лет',
+              location: 'Москва',
+              photo: 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg',
+              bio: 'Профессиональный оператор с опытом работы более 8 лет. Специализируюсь на съемках художественных фильмов и рекламных роликов. Работал на проектах для крупных брендов.'
+            });
+            setLoading(false);
+            return;
+          }
+          
+          // Загружаем данные из API
+          const response = await fetch('/api/professionals');
+          if (!response.ok) {
+            throw new Error('Не удалось загрузить данные специалиста');
+          }
+          
+          const data = await response.json();
+          const found = data.find((p: Professional) => p.id === Number(id));
+          
+          if (found) {
+            setProfessional({
+              id: found.id,
+              name: found.name,
+              profession: found.profession,
+              rating: found.rating || 0,
+              experience: found.experience,
+              location: found.location,
+              photo: found.photo || 'https://via.placeholder.com/150',
+              bio: found.biography || 'Информация отсутствует'
+            });
+          } else {
+            setError('Специалист не найден');
+          }
+        } catch (err) {
+          console.error('Ошибка при загрузке данных специалиста:', err);
+          setError('Произошла ошибка при загрузке данных. Пожалуйста, попробуйте позже.');
+        } finally {
+          setLoading(false);
         }
-      }
+      };
+      
+      fetchProfessional();
     }
   }, [id]);
 
@@ -343,11 +378,19 @@ const ProfessionalDetailPage = () => {
     setInputValue('');
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   if (!professional) {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
-        <Typography variant="h5">Профессионал не найден</Typography>
-        <Button onClick={() => navigate('/')} startIcon={<ArrowBackIcon />}>
+        <Alert severity="error">{error || 'Специалист не найден'}</Alert>
+        <Button onClick={() => navigate('/')} startIcon={<ArrowBackIcon />} sx={{ mt: 2 }}>
           Вернуться к списку
         </Button>
       </Container>
@@ -370,6 +413,15 @@ const ProfessionalDetailPage = () => {
           Профиль
         </Typography>
       </Box>
+
+      {/* Показываем сообщение об ошибке, если есть */}
+      {error && (
+        <Container>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        </Container>
+      )}
 
       {/* Компактный блок с фото и инфо */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, px: 3, pt: 2, pb: 1 }}>

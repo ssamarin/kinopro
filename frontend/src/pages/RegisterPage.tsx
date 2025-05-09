@@ -35,9 +35,14 @@ const RegisterPage: React.FC = () => {
         const data = await res.json();
         if (data.token) {
           // Если API возвращает токен при регистрации, используем его для автоматического входа
-          login(data.token, { email });
+          login(data.token, { 
+            id: data.id || 0, 
+            email: data.email || email,
+            firstName: data.firstName || '',
+            lastName: data.lastName || ''
+          });
           setMsg('Регистрация успешна!');
-          setTimeout(() => navigate('/'), 1000);
+          setTimeout(() => navigate('/profile'), 1000); // Перенаправляем на страницу профиля для заполнения данных
         } else {
           // Если API не возвращает токен, просто перенаправляем на страницу входа
           setMsg('Регистрация успешна!');
@@ -60,6 +65,7 @@ const RegisterPage: React.FC = () => {
           <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Регистрация</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>Создайте новый аккаунт</Typography>
         </Box>
+        
         <form onSubmit={handleSubmit}>
           <Stack spacing={3}>
             <TextField
