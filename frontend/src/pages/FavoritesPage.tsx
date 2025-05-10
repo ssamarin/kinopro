@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, CircularProgress, Alert } from '@mui/material';
+import { Container, Box, Typography, CircularProgress, Alert, Button } from '@mui/material';
 import Header from '../components/Header';
 import ProfessionalsList from '../components/ProfessionalsList';
 import { useFavorites } from '../context/FavoritesContext';
 import { Professional } from '../components/ProfessionalCard';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import { Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const FavoritesPage: React.FC = () => {
   const { favorites } = useFavorites();
+  const { isAuthenticated } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,13 +47,35 @@ const FavoritesPage: React.FC = () => {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Header />
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 4, fontWeight: 700, color: 'primary.main', textAlign: 'center' }}
-        >
-          Избранные специалисты
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontWeight: 700, color: 'primary.main' }}
+          >
+            Избранные специалисты
+          </Typography>
+          
+          {isAuthenticated && (
+            <Button
+              component={RouterLink}
+              to="/favorite-lists"
+              variant="outlined"
+              startIcon={<ListAltIcon />}
+              sx={{
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 14,
+                padding: '8px 16px',
+                '&:hover': {
+                  boxShadow: '0 2px 8px rgba(91,60,196,0.25)',
+                }
+              }}
+            >
+              Мои списки
+            </Button>
+          )}
+        </Box>
         
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>

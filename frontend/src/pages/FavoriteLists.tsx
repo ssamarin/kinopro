@@ -21,7 +21,11 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useAuth } from '../context/AuthContext';
+import { Link as RouterLink } from 'react-router-dom';
+import Header from '../components/Header';
 
 interface FavoriteList {
   id: number;
@@ -195,122 +199,145 @@ const FavoriteLists: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Списки избранного
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenCreateModal}
-        >
-          Создать список
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
-
-      {loading && !lists.length ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <List>
-          {lists.map((list) => (
-            <React.Fragment key={list.id}>
-              <ListItem>
-                <ListItemText
-                  primary={list.title}
-                  secondary={
-                    <>
-                      {list.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          {list.description}
-                        </Typography>
-                      )}
-                      <Typography variant="caption" color="text.secondary">
-                        {list.list_of_ids.length} профессионалов • Создан {new Date(list.created_at).toLocaleDateString()}
-                      </Typography>
-                    </>
-                  }
-                />
-                <ListItemSecondaryAction>
-                  <IconButton 
-                    edge="end" 
-                    aria-label="редактировать"
-                    onClick={() => handleEdit(list)}
-                    sx={{ mr: 1 }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton 
-                    edge="end" 
-                    aria-label="удалить"
-                    onClick={() => handleDelete(list.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-              <Divider component="li" />
-            </React.Fragment>
-          ))}
-          {!lists.length && !loading && (
-            <Typography variant="body1" color="text.secondary" align="center" sx={{ my: 4 }}>
-              У вас пока нет списков избранного. Создайте новый список!
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Header />
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="h4" component="h1">
+              Списки избранного
             </Typography>
-          )}
-        </List>
-      )}
-
-      <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingList ? 'Редактировать список' : 'Создать новый список'}
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Название списка"
-            fullWidth
-            value={listTitle}
-            onChange={(e) => setListTitle(e.target.value)}
-            margin="normal"
-            required
-          />
-          <TextField
-            label="Описание (необязательно)"
-            fullWidth
-            value={listDescription}
-            onChange={(e) => setListDescription(e.target.value)}
-            margin="normal"
-            multiline
-            rows={3}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal}>
-            Отмена
-          </Button>
-          <Button 
-            onClick={handleCreateOrUpdate}
+            <Button
+              component={RouterLink}
+              to="/favorites"
+              startIcon={<FavoriteIcon />}
+              variant="text"
+              sx={{ ml: 2, fontWeight: 600 }}
+            >
+              К избранному
+            </Button>
+          </Box>
+          <Button
             variant="contained"
-            disabled={!listTitle.trim() || loading}
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreateModal}
           >
-            {loading ? 'Сохранение...' : (editingList ? 'Сохранить' : 'Создать')}
+            Создать список
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
+
+        {loading && !lists.length ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <List>
+            {lists.map((list) => (
+              <React.Fragment key={list.id}>
+                <ListItem>
+                  <ListItemText
+                    primary={list.title}
+                    secondary={
+                      <>
+                        {list.description && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {list.description}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                          {list.list_of_ids.length} профессионалов • Создан {new Date(list.created_at).toLocaleDateString()}
+                        </Typography>
+                      </>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <IconButton 
+                      component={RouterLink}
+                      to={`/favorite-lists/${list.id}`}
+                      edge="end" 
+                      aria-label="просмотреть"
+                      sx={{ mr: 1 }}
+                    >
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton 
+                      edge="end" 
+                      aria-label="редактировать"
+                      onClick={() => handleEdit(list)}
+                      sx={{ mr: 1 }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton 
+                      edge="end" 
+                      aria-label="удалить"
+                      onClick={() => handleDelete(list.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+                <Divider component="li" />
+              </React.Fragment>
+            ))}
+            {!lists.length && !loading && (
+              <Typography variant="body1" color="text.secondary" align="center" sx={{ my: 4 }}>
+                У вас пока нет списков избранного. Создайте новый список!
+              </Typography>
+            )}
+          </List>
+        )}
+
+        <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            {editingList ? 'Редактировать список' : 'Создать новый список'}
+          </DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Название списка"
+              fullWidth
+              value={listTitle}
+              onChange={(e) => setListTitle(e.target.value)}
+              margin="normal"
+              required
+            />
+            <TextField
+              label="Описание (необязательно)"
+              fullWidth
+              value={listDescription}
+              onChange={(e) => setListDescription(e.target.value)}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseModal}>
+              Отмена
+            </Button>
+            <Button 
+              onClick={handleCreateOrUpdate}
+              variant="contained"
+              disabled={!listTitle.trim() || loading}
+            >
+              {loading ? 'Сохранение...' : (editingList ? 'Сохранить' : 'Создать')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </Box>
   );
 };
 

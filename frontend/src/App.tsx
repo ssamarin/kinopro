@@ -8,6 +8,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import FavoritesPage from './pages/FavoritesPage';
 import ProfilePage from './pages/ProfilePage';
 import FavoriteLists from './pages/FavoriteLists';
+import FavoriteListDetail from './pages/FavoriteListDetail';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { AuthProvider } from './context/AuthContext';
 import ProfessionalDetailPage from './pages/ProfessionalDetailPage';
@@ -79,6 +80,7 @@ const App: React.FC = () => {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/favorite-lists" element={<FavoriteLists />} />
+              <Route path="/favorite-lists/:id" element={<FavoriteListDetail />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/professionals/:id" element={<ProfessionalDetailPage />} />
               <Route path="*" element={<NotFoundPage />} />
