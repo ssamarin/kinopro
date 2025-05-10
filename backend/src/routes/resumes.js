@@ -301,26 +301,24 @@ router.put('/resumes/:id/experience', async (req, res) => {
   }
 });
 
-// Получение всех специалистов (пользователей с резюме)
+// Получение списка профессионалов с фильтрацией
 router.get('/professionals', async (req, res) => {
   try {
-    const db = await getDb();
-    
-    // Получаем параметры фильтрации из запроса
-    const {
-      professionGroup,
-      profession,
-      city,
-      experienceFrom,
-      experienceTo,
-      ratingFrom,
+    const { 
+      professionId, 
+      professionGroupId, 
+      cityId, 
+      experienceFrom, 
+      experienceTo, 
+      ratingFrom, 
       ratingTo,
-      hasPhoto,
       search
     } = req.query;
     
-    // Построение базового SQL запроса с возможными условиями
-    let sql = `
+    const db = await getDb();
+    
+    // Базовый запрос
+    let query = `
       SELECT 
         r.id as resume_id,
         r.owner_user_id,
@@ -347,69 +345,76 @@ router.get('/professionals', async (req, res) => {
     
     const params = [];
     
-    // Добавляем условия фильтрации
-    if (professionGroup) {
-      sql += ` AND pg.id = ?`;
-      params.push(professionGroup);
+    // Применяем фильтры
+    if (professionId) {
+      query += " AND r.professions_id = ?";
+      params.push(professionId);
     }
     
-    if (profession) {
-      sql += ` AND p.id = ?`;
-      params.push(profession);
+    if (professionGroupId) {
+      query += " AND pg.id = ?";
+      params.push(professionGroupId);
     }
     
-    if (city) {
-      sql += ` AND c.id = ?`;
-      params.push(city);
+    if (cityId) {
+      query += " AND r.city_id = ?";
+      params.push(cityId);
     }
     
-    if (hasPhoto === 'true') {
-      sql += ` AND r.media_url IS NOT NULL AND r.media_url != ''`;
-    }
-    
-    // Фильтрация по опыту работы будет применена после получения данных,
-    // так как это вычисляемое поле
-    
-    // Фильтрация по поиску (поиск по имени, фамилии, профессии или биографии)
+    // Поиск по имени или профессии
     if (search) {
-      sql += ` AND (
-        u.first_name LIKE ? OR 
-        u.last_name LIKE ? OR 
-        p.name LIKE ? OR 
-        r.biography LIKE ? OR
-        c.city LIKE ?
-      )`;
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      query += " AND (u.first_name LIKE ? OR u.last_name LIKE ? OR p.name LIKE ?)";
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam);
     }
     
-    // Добавляем сортировку
-    sql += ` ORDER BY r.id DESC`;
+    // Получаем список профессионалов
+    const professionals = await db.all(query, params);
     
-    // Выполняем запрос
-    const professionals = await db.all(sql, params);
+    // Получаем все отзывы для всех профессионалов
+    const userIds = professionals.map(pro => pro.owner_user_id);
+    let reviews = [];
     
-    // Преобразуем данные для фронтенда
+    if (userIds.length > 0) {
+      const placeholders = userIds.map(() => '?').join(',');
+      reviews = await db.all(`
+        SELECT reviewed_user_id, rating
+        FROM reviews
+        WHERE reviewed_user_id IN (${placeholders})
+      `, userIds);
+    }
+    
+    // Группируем отзывы по пользователям и вычисляем средний рейтинг
+    const ratingsMap = {};
+    reviews.forEach(review => {
+      if (!ratingsMap[review.reviewed_user_id]) {
+        ratingsMap[review.reviewed_user_id] = {
+          sum: 0,
+          count: 0
+        };
+      }
+      ratingsMap[review.reviewed_user_id].sum += review.rating;
+      ratingsMap[review.reviewed_user_id].count += 1;
+    });
+    
+    // Форматируем данные для фронтенда
     let formattedProfessionals = professionals.map(pro => {
-      // Используем имя и фамилию из базы данных, если они есть, иначе извлекаем из email
+      // Формируем имя на основе данных из БД или email
       let name;
       if (pro.first_name || pro.last_name) {
         name = [pro.first_name, pro.last_name].filter(Boolean).join(' ');
       } else {
-        // Резервный вариант - извлекаем из email
         const nameParts = pro.email.split('@')[0].split('.');
         name = nameParts.length > 1 
           ? `${nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1)} ${nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)}`
           : nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
       }
       
-      // Генерируем рейтинг в диапазоне от 0 до 5 с шагом 0.5
-      // Для некоторых специалистов рейтинг будет null
+      // Получаем рейтинг из отзывов
       let rating = null;
-      if (pro.feedback_ids || Math.random() > 0.3) { // 70% специалистов имеют рейтинг
-        // Генерируем случайный рейтинг от 0 до 5 с шагом 0.5
-        const ratingValue = Math.round(Math.random() * 10) / 2;
-        rating = parseFloat(ratingValue.toFixed(1));
+      const userRatings = ratingsMap[pro.owner_user_id];
+      if (userRatings && userRatings.count > 0) {
+        rating = parseFloat((userRatings.sum / userRatings.count).toFixed(1));
       }
       
       // Вычисляем опыт работы на основе поля since, если оно задано
@@ -453,7 +458,7 @@ router.get('/professionals', async (req, res) => {
         cityId: pro.city_id,
         photo: pro.media_url || null,
         biography: pro.biography,
-        hasFeedback: !!pro.feedback_ids
+        hasFeedback: !!ratingsMap[pro.owner_user_id]
       };
     });
     
@@ -542,12 +547,45 @@ router.get('/professionals/:id', async (req, res) => {
         : nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
     }
     
-    // Генерируем рейтинг
+    // Получаем отзывы для этого пользователя
+    const reviews = await db.all(`
+      SELECT 
+        r.id, 
+        r.rating, 
+        r.text, 
+        r.reviewed_user_id, 
+        r.reviewer_user_id, 
+        r.created_at,
+        u.first_name as reviewer_first_name,
+        u.last_name as reviewer_last_name
+      FROM reviews r
+      JOIN users u ON r.reviewer_user_id = u.id
+      WHERE r.reviewed_user_id = ?
+      ORDER BY r.created_at DESC
+    `, professional.owner_user_id);
+    
+    // Вычисляем средний рейтинг на основе отзывов
     let rating = null;
-    if (professional.feedback_ids || Math.random() > 0.3) {
-      const ratingValue = Math.round(Math.random() * 10) / 2;
-      rating = parseFloat(ratingValue.toFixed(1));
+    if (reviews.length > 0) {
+      const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+      rating = parseFloat((sum / reviews.length).toFixed(1));
     }
+    
+    // Форматируем отзывы для ответа
+    const formattedReviews = reviews.map(review => {
+      let reviewerName = 'Пользователь';
+      if (review.reviewer_first_name || review.reviewer_last_name) {
+        reviewerName = [review.reviewer_first_name, review.reviewer_last_name].filter(Boolean).join(' ');
+      }
+      
+      return {
+        id: review.id,
+        rating: review.rating,
+        text: review.text,
+        reviewerName,
+        createdAt: review.created_at
+      };
+    });
     
     // Вычисляем опыт работы
     let experience;
@@ -585,6 +623,8 @@ router.get('/professionals/:id', async (req, res) => {
       professionGroup: professional.profession_group_name,
       professionGroupId: professional.profession_group_id,
       rating,
+      reviews: formattedReviews,
+      reviewsCount: reviews.length,
       experience,
       experienceYears: years,
       since: professional.since,
@@ -592,7 +632,7 @@ router.get('/professionals/:id', async (req, res) => {
       cityId: professional.city_id,
       photo: professional.media_url || null,
       biography: professional.biography || '',
-      hasFeedback: !!professional.feedback_ids,
+      hasFeedback: reviews.length > 0,
       portfolioProjects: [] // В будущем здесь можно добавить проекты
     };
     

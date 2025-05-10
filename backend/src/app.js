@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './routes/auth.js';
 import resumeRoutes from './routes/resumes.js';
 import userRoutes from './routes/users.js';
+import reviewRoutes from './routes/reviews.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { initDb } from './db.js';
@@ -38,6 +39,9 @@ app.use('/api', resumeRoutes);
 
 // Добавляем маршруты для работы с профилем пользователя
 app.use('/api/users', userRoutes);
+
+// Добавляем маршруты для работы с отзывами
+app.use('/api', reviewRoutes);
 
 // Проверка работы API
 app.get('/', (req, res) => {

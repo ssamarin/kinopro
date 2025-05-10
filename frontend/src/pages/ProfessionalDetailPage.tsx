@@ -10,17 +10,30 @@ import MessageIcon from '@mui/icons-material/Message';
 import CloseIcon from '@mui/icons-material/Close';
 import { useFavorites } from '../context/FavoritesContext';
 import { Professional } from '../components/ProfessionalCard';
+import ReviewForm from '../components/ReviewForm';
 
-// Определим интерфейс для профессионала
+// Обновим интерфейс для профессионала
 interface ProfessionalDetail {
   id: number;
+  userId: number;
   name: string;
   profession: string;
-  rating: number;
+  rating: number | null;
   experience: string;
   location: string;
   photo: string;
-  bio: string;
+  biography: string;
+  reviews?: Review[];
+  reviewsCount?: number;
+}
+
+// Добавим интерфейс для отзывов
+interface Review {
+  id: number;
+  rating: number;
+  text: string;
+  reviewerName: string;
+  createdAt: string;
 }
 
 const StyledImage = styled('div')(({ theme }) => ({
@@ -321,41 +334,32 @@ const ProfessionalDetailPage = () => {
           if (id === 'timur-babenko') {
             setProfessional({
               id: 999,
+              userId: 999,
               name: 'Тимур Бабенко',
               profession: 'Оператор',
               rating: 4.8,
               experience: '8 лет',
               location: 'Москва',
               photo: 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg',
-              bio: 'Профессиональный оператор с опытом работы более 8 лет. Специализируюсь на съемках художественных фильмов и рекламных роликов. Работал на проектах для крупных брендов.'
+              biography: 'Профессиональный оператор с опытом работы более 8 лет. Специализируюсь на съемках художественных фильмов и рекламных роликов. Работал на проектах для крупных брендов.',
+              reviews: [
+                { id: 1, rating: 5, text: 'Отличный специалист!', reviewerName: 'Иван Петров', createdAt: '2023-05-15' },
+                { id: 2, rating: 4.5, text: 'Хорошая работа, рекомендую.', reviewerName: 'Мария Сидорова', createdAt: '2023-04-20' }
+              ],
+              reviewsCount: 2
             });
             setLoading(false);
             return;
           }
           
           // Загружаем данные из API
-          const response = await fetch('/api/professionals');
+          const response = await fetch(`/api/professionals/${id}`);
           if (!response.ok) {
             throw new Error('Не удалось загрузить данные специалиста');
           }
           
           const data = await response.json();
-          const found = data.find((p: Professional) => p.id === Number(id));
-          
-          if (found) {
-            setProfessional({
-              id: found.id,
-              name: found.name,
-              profession: found.profession,
-              rating: found.rating || 0,
-              experience: found.experience,
-              location: found.location,
-              photo: found.photo || 'https://via.placeholder.com/150',
-              bio: found.biography || 'Информация отсутствует'
-            });
-          } else {
-            setError('Специалист не найден');
-          }
+          setProfessional(data);
         } catch (err) {
           console.error('Ошибка при загрузке данных специалиста:', err);
           setError('Произошла ошибка при загрузке данных. Пожалуйста, попробуйте позже.');
@@ -376,6 +380,57 @@ const ProfessionalDetailPage = () => {
         : chat
     ));
     setInputValue('');
+  };
+
+  // Отзывы — слайдер
+  const renderReviews = () => {
+    if (!professional || !professional.reviews || professional.reviews.length === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          У этого специалиста пока нет отзывов.
+        </Typography>
+      );
+    }
+    
+    return (
+      <Box sx={{ display: 'flex', overflowX: 'auto', pb: 1 }}>
+        {professional.reviews.map((review) => (
+          <ReviewCard key={review.id}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              {review.text || 'Без комментария'}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <StarIcon sx={{ color: 'yellow', fontSize: 18 }} />
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{review.rating}</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {review.reviewerName}
+              </Typography>
+            </Box>
+          </ReviewCard>
+        ))}
+      </Box>
+    );
+  };
+
+  // Функция для обновления данных после добавления отзыва
+  const handleReviewAdded = async () => {
+    if (id) {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/professionals/${id}`);
+        if (!response.ok) {
+          throw new Error('Не удалось обновить данные специалиста');
+        }
+        const data = await response.json();
+        setProfessional(data);
+      } catch (error) {
+        console.error('Ошибка при обновлении данных:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   if (loading) {
@@ -448,28 +503,39 @@ const ProfessionalDetailPage = () => {
           Биография
         </Typography>
         <Typography color="text.secondary" sx={{ fontSize: 15 }}>
-          {professional.bio}
+          {professional.biography}
         </Typography>
       </Box>
 
       {/* Отзывы — слайдер */}
       <Box sx={{ px: 3, pt: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-          Отзывы
-        </Typography>
-        <Box sx={{ display: 'flex', overflowX: 'auto', pb: 1 }}>
-          {mockReviews.map((review) => (
-            <ReviewCard key={review.id}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                {review.text}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <StarIcon sx={{ color: 'yellow', fontSize: 18 }} />
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{review.rating}</Typography>
-              </Box>
-            </ReviewCard>
-          ))}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Отзывы
+          </Typography>
+          {professional && professional.rating !== null && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'background.paper', px: 1.5, py: 0.5, borderRadius: 2 }}>
+              <StarIcon sx={{ color: 'yellow', fontSize: 18 }} />
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{professional.rating}</Typography>
+              {professional.reviewsCount && (
+                <Typography variant="caption" color="text.secondary">
+                  ({professional.reviewsCount})
+                </Typography>
+              )}
+            </Box>
+          )}
         </Box>
+        {renderReviews()}
+        
+        {/* Форма для добавления отзыва */}
+        {professional && (
+          <ReviewForm 
+            professionalId={professional.id} 
+            professionalName={professional.name}
+            userId={professional.userId}
+            onReviewAdded={handleReviewAdded}
+          />
+        )}
       </Box>
 
       {/* Примеры работ */}
