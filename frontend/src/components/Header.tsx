@@ -5,6 +5,7 @@ import MovieIcon from '@mui/icons-material/Movie';
 import PersonIcon from '@mui/icons-material/Person';
 import { Link as RouterLink } from 'react-router-dom';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import Badge from '@mui/material/Badge';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
@@ -193,6 +194,14 @@ const Header: React.FC = () => {
                 >
                   <EditIcon fontSize="small" sx={{ mr: 1 }} />
                   Мой профиль
+                </MenuItem>
+                <MenuItem 
+                  component={RouterLink} 
+                  to="/favorite-lists" 
+                  onClick={handleClose}
+                >
+                  <ListAltIcon fontSize="small" sx={{ mr: 1 }} />
+                  Управление списками
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <LogoutIcon fontSize="small" sx={{ mr: 1 }} />

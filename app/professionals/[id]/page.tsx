@@ -1,21 +1,26 @@
 "use client";
 
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Heart, ArrowLeft, Star, MessageCircle } from "lucide-react";
+import FavoriteListModal from "../../../components/FavoriteListModal";
 
 export default function ProfessionalPage() {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [professional, setProfessional] = useState({
+    id: 1, // Здесь нужно получить реальный ID из параметров
+    name: "Тимур Бабенко"
+  });
   
   const handleBack = () => {
     router.back();
   };
   
-  const handleToggleFavorite = () => {
-    setIsFavorite(!isFavorite);
+  const handleFavoriteClick = () => {
+    setIsModalOpen(true);
   };
   
   const handleMessage = () => {
@@ -120,7 +125,7 @@ export default function ProfessionalPage() {
             </div>
           </button>
           <button 
-            onClick={handleToggleFavorite}
+            onClick={handleFavoriteClick}
             className={`w-14 ${isFavorite ? 'bg-red-500' : 'bg-gray-800'} rounded-lg flex items-center justify-center`}
             tabIndex={0}
             aria-label={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
@@ -129,6 +134,13 @@ export default function ProfessionalPage() {
           </button>
         </div>
       </div>
+
+      <FavoriteListModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        professionalId={professional.id}
+        professionalName={professional.name}
+      />
     </div>
   );
 } 

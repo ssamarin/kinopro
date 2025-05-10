@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Box,
@@ -15,6 +15,7 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useFavorites } from '../context/FavoritesContext';
 import { useNavigate } from 'react-router-dom';
+import FavoriteListModal from './FavoriteListModal';
 
 export interface Professional {
   id: number;
@@ -125,9 +126,14 @@ const groupColors: Record<string, string> = {
 const ProfessionalCard: React.FC<{ professional: Professional }> = ({ professional }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleDetailsClick = () => {
     navigate(`/professionals/${professional.id}`);
+  };
+
+  const handleFavoriteClick = () => {
+    setIsModalOpen(true);
   };
 
   // Определяем цвет для профессии или используем цвет группы
@@ -144,83 +150,92 @@ const ProfessionalCard: React.FC<{ professional: Professional }> = ({ profession
   const photoUrl = professional.photo || 'https://via.placeholder.com/80x100?text=No+Photo';
 
   return (
-    <StyledCard>
-      <PhotoBox style={{ backgroundImage: `url(${photoUrl})` }} />
-      <ContentBox>
-        <TopRow>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 17, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {professional.name}
+    <>
+      <StyledCard>
+        <PhotoBox style={{ backgroundImage: `url(${photoUrl})` }} />
+        <ContentBox>
+          <TopRow>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 17, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {professional.name}
+            </Typography>
+            <IconButton
+              aria-label="добавить в избранное"
+              onClick={handleFavoriteClick}
+              sx={{
+                color: isFavorite(professional.id) ? 'error.main' : 'grey.500',
+                p: 0.5,
+                outline: 'none',
+                boxShadow: 'none',
+                '&:focus': { outline: 'none', boxShadow: 'none' },
+                '&:focus-visible': { outline: 'none', boxShadow: 'none' },
+              }}
+            >
+              {isFavorite(professional.id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+            </IconButton>
+          </TopRow>
+          <Typography color="primary" sx={{ fontWeight: 500, fontSize: 15, mb: 0.5, mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Chip
+              label={professional.profession}
+              sx={{
+                bgcolor: getProfessionColor(),
+                color: '#fff',
+                fontWeight: 600,
+                height: 28,
+                fontSize: 15,
+                pl: 0.5,
+                boxShadow: `0 2px 8px 0 ${getProfessionColor()}22`,
+                textTransform: 'capitalize',
+                mb: 0.5,
+                mt: 0.5,
+                maxWidth: 120,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              size="small"
+            />
           </Typography>
-          <IconButton
-            aria-label="add to favorites"
-            onClick={() => toggleFavorite(professional.id)}
-            sx={{
-              color: isFavorite(professional.id) ? 'error.main' : 'grey.500',
-              p: 0.5,
-              outline: 'none',
-              boxShadow: 'none',
-              '&:focus': { outline: 'none', boxShadow: 'none' },
-              '&:focus-visible': { outline: 'none', boxShadow: 'none' },
-            }}
-          >
-            {isFavorite(professional.id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
-          </IconButton>
-        </TopRow>
-        <Typography color="primary" sx={{ fontWeight: 500, fontSize: 15, mb: 0.5, mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          <Chip
-            label={professional.profession}
-            sx={{
-              bgcolor: getProfessionColor(),
-              color: '#fff',
-              fontWeight: 600,
-              height: 28,
-              fontSize: 15,
-              pl: 0.5,
-              boxShadow: `0 2px 8px 0 ${getProfessionColor()}22`,
-              textTransform: 'capitalize',
-              mb: 0.5,
-              mt: 0.5,
-              maxWidth: 120,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            size="small"
-          />
-        </Typography>
-        <InfoRow>
-          <Chip
-            icon={<StarIcon sx={{ color: professional.rating !== null ? '#fbbf24' : '#a1a1aa', fontSize: 18 }} />}
-            label={ratingDisplay}
-            sx={{ bgcolor: '#27272a', color: '#fff', fontWeight: 600, height: 28, fontSize: 15, pl: 0.5 }}
-            size="small"
-          />
-          <Chip
-            icon={<WorkHistoryIcon sx={{ color: '#a1a1aa', fontSize: 18 }} />}
-            label={professional.experience}
-            sx={{ bgcolor: '#27272a', color: '#fff', height: 28, fontSize: 15, pl: 0.5 }}
-            size="small"
-          />
-          <Chip
-            icon={<LocationOnIcon sx={{ color: '#60a5fa', fontSize: 18 }} />}
-            label={professional.location}
-            sx={{ bgcolor: '#27272a', color: '#fff', height: 28, fontSize: 15, pl: 0.5 }}
-            size="small"
-          />
-        </InfoRow>
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-          <StyledButton 
-            variant="contained" 
-            onClick={handleDetailsClick}
-            tabIndex={0}
-            aria-label="Перейти на страницу профессионала"
-          >
-            Подробнее
-          </StyledButton>
-        </Box>
-      </ContentBox>
-    </StyledCard>
+          <InfoRow>
+            <Chip
+              icon={<StarIcon sx={{ color: professional.rating !== null ? '#fbbf24' : '#a1a1aa', fontSize: 18 }} />}
+              label={ratingDisplay}
+              sx={{ bgcolor: '#27272a', color: '#fff', fontWeight: 600, height: 28, fontSize: 15, pl: 0.5 }}
+              size="small"
+            />
+            <Chip
+              icon={<WorkHistoryIcon sx={{ color: '#a1a1aa', fontSize: 18 }} />}
+              label={professional.experience}
+              sx={{ bgcolor: '#27272a', color: '#fff', height: 28, fontSize: 15, pl: 0.5 }}
+              size="small"
+            />
+            <Chip
+              icon={<LocationOnIcon sx={{ color: '#60a5fa', fontSize: 18 }} />}
+              label={professional.location}
+              sx={{ bgcolor: '#27272a', color: '#fff', height: 28, fontSize: 15, pl: 0.5 }}
+              size="small"
+            />
+          </InfoRow>
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+            <StyledButton 
+              variant="contained" 
+              onClick={handleDetailsClick}
+              tabIndex={0}
+              aria-label="Перейти на страницу профессионала"
+            >
+              Подробнее
+            </StyledButton>
+          </Box>
+        </ContentBox>
+      </StyledCard>
+
+      <FavoriteListModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        professionalId={professional.id}
+        professionalName={professional.name}
+      />
+    </>
   );
 };
 
