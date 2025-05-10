@@ -5,7 +5,9 @@
     "type": "module",
     "scripts": {
         "start": "node app.js",
-        "dev": "nodemon app.js"
+        "dev": "nodemon app.js",
+        "update-user-status": "node update-user-status.js",
+        "migrate": "node migrate-add-profile-status.js"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",

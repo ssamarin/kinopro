@@ -22,6 +22,7 @@ const ProfessionalsPage: React.FC = () => {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filtersEnabled, setFiltersEnabled] = useState(true);
   
   // Загрузка специалистов из БД
   useEffect(() => {
@@ -30,13 +31,33 @@ const ProfessionalsPage: React.FC = () => {
       setError('');
       
       try {
-        const response = await fetch('/api/professionals');
+        // Получаем токен из localStorage, если есть
+        const token = localStorage.getItem('token');
+        
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch('/api/professionals', {
+          headers
+        });
+        
         if (!response.ok) {
           throw new Error('Не удалось загрузить список специалистов');
         }
         
         const data = await response.json();
-        setProfessionals(data);
+        
+        // Новый формат ответа API
+        if (data && typeof data === 'object' && 'professionals' in data) {
+          setProfessionals(data.professionals || []);
+          setFiltersEnabled(data.filtersEnabled || false);
+        } else {
+          // Обрабатываем старый формат для совместимости
+          setProfessionals(Array.isArray(data) ? data : []);
+          setFiltersEnabled(true);
+        }
       } catch (err) {
         console.error('Ошибка при загрузке специалистов:', err);
         setError('Произошла ошибка при загрузке данных. Пожалуйста, попробуйте позже.');
@@ -140,11 +161,17 @@ const ProfessionalsPage: React.FC = () => {
             borderColor: 'divider',
           }}
         >
+          {!filtersEnabled && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Для доступа к фильтрам и просмотра всех профессионалов необходимо заполнить свой профиль
+            </Alert>
+          )}
           <SearchAndFilters
             searchQuery={searchQuery}
             onSearchChange={handleSearch}
             filters={filters}
             onFilterChange={handleFilterChange}
+            disabled={!filtersEnabled}
           />
         </Paper>
         

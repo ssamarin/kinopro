@@ -1,5 +1,7 @@
 import express from 'express';
 import { getDb } from '../db.js';
+import { updateProfileStatus } from '../models/user.js';
+import { optionalAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -104,6 +106,9 @@ router.post('/resumes', async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [owner_user_id, professions_id, city_id, biography, media_url, since]
     );
+    
+    // Обновляем статус пользователя на "профиль заполнен" (1)
+    await updateProfileStatus(owner_user_id, 1);
     
     // Получаем созданное резюме с дополнительной информацией
     const newResume = await db.get(`
@@ -302,7 +307,7 @@ router.put('/resumes/:id/experience', async (req, res) => {
 });
 
 // Получение списка профессионалов с фильтрацией
-router.get('/professionals', async (req, res) => {
+router.get('/professionals', optionalAuth, async (req, res) => {
   try {
     const { 
       professionId, 
@@ -315,7 +320,19 @@ router.get('/professionals', async (req, res) => {
       search
     } = req.query;
     
+    // Получаем ID пользователя из токена, если он есть
+    const userId = req.userId;
+    
     const db = await getDb();
+    
+    // Проверяем статус пользователя, если есть userId
+    let userStatus = 1; // По умолчанию считаем, что профиль заполнен
+    if (userId) {
+      const user = await db.get('SELECT profile_complete_status FROM users WHERE id = ?', userId);
+      if (user) {
+        userStatus = user.profile_complete_status;
+      }
+    }
     
     // Базовый запрос
     let query = `
@@ -345,27 +362,30 @@ router.get('/professionals', async (req, res) => {
     
     const params = [];
     
-    // Применяем фильтры
-    if (professionId) {
-      query += " AND r.professions_id = ?";
-      params.push(professionId);
-    }
-    
-    if (professionGroupId) {
-      query += " AND pg.id = ?";
-      params.push(professionGroupId);
-    }
-    
-    if (cityId) {
-      query += " AND r.city_id = ?";
-      params.push(cityId);
-    }
-    
-    // Поиск по имени или профессии
-    if (search) {
-      query += " AND (u.first_name LIKE ? OR u.last_name LIKE ? OR p.name LIKE ?)";
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam);
+    // Применяем фильтры только если пользователь имеет заполненный профиль (status = 1)
+    if (userStatus === 1) {
+      // Применяем фильтры
+      if (professionId) {
+        query += " AND r.professions_id = ?";
+        params.push(professionId);
+      }
+      
+      if (professionGroupId) {
+        query += " AND pg.id = ?";
+        params.push(professionGroupId);
+      }
+      
+      if (cityId) {
+        query += " AND r.city_id = ?";
+        params.push(cityId);
+      }
+      
+      // Поиск по имени или профессии
+      if (search) {
+        query += " AND (u.first_name LIKE ? OR u.last_name LIKE ? OR p.name LIKE ?)";
+        const searchParam = `%${search}%`;
+        params.push(searchParam, searchParam, searchParam);
+      }
     }
     
     // Получаем список профессионалов
@@ -462,38 +482,49 @@ router.get('/professionals', async (req, res) => {
       };
     });
     
-    // Применяем фильтры для вычисляемых полей (опыт работы и рейтинг)
-    if (experienceFrom) {
-      formattedProfessionals = formattedProfessionals.filter(pro => 
-        pro.experienceYears >= parseInt(experienceFrom)
-      );
+    // Применяем фильтры для вычисляемых полей только если пользователь имеет заполненный профиль
+    if (userStatus === 1) {
+      // Применяем фильтры для вычисляемых полей (опыт работы и рейтинг)
+      if (experienceFrom) {
+        formattedProfessionals = formattedProfessionals.filter(pro => 
+          pro.experienceYears >= parseInt(experienceFrom)
+        );
+      }
+      
+      if (experienceTo) {
+        formattedProfessionals = formattedProfessionals.filter(pro => 
+          pro.experienceYears <= parseInt(experienceTo)
+        );
+      }
+      
+      if (ratingFrom) {
+        const minRating = parseFloat(ratingFrom);
+        formattedProfessionals = formattedProfessionals.filter(pro => {
+          // Если минимальный рейтинг > 0, исключаем карточки с null или 0 рейтингом
+          if (minRating > 0 && (pro.rating === null || pro.rating === 0)) {
+            return false;
+          }
+          // Проверяем нижнюю границу рейтинга (только для не-null значений)
+          return pro.rating === null || pro.rating >= minRating;
+        });
+      }
+      
+      if (ratingTo) {
+        formattedProfessionals = formattedProfessionals.filter(pro => 
+          pro.rating === null || pro.rating <= parseFloat(ratingTo)
+        );
+      }
+    } else {
+      // Для пользователей с незаполненным профилем ограничиваем список до 10 профессионалов
+      formattedProfessionals = formattedProfessionals.slice(0, 10);
     }
     
-    if (experienceTo) {
-      formattedProfessionals = formattedProfessionals.filter(pro => 
-        pro.experienceYears <= parseInt(experienceTo)
-      );
-    }
-    
-    if (ratingFrom) {
-      const minRating = parseFloat(ratingFrom);
-      formattedProfessionals = formattedProfessionals.filter(pro => {
-        // Если минимальный рейтинг > 0, исключаем карточки с null или 0 рейтингом
-        if (minRating > 0 && (pro.rating === null || pro.rating === 0)) {
-          return false;
-        }
-        // Проверяем нижнюю границу рейтинга (только для не-null значений)
-        return pro.rating === null || pro.rating >= minRating;
-      });
-    }
-    
-    if (ratingTo) {
-      formattedProfessionals = formattedProfessionals.filter(pro => 
-        pro.rating === null || pro.rating <= parseFloat(ratingTo)
-      );
-    }
-    
-    res.json(formattedProfessionals);
+    // Возвращаем также информацию о статусе пользователя для фронтенда
+    res.json({
+      professionals: formattedProfessionals,
+      filtersEnabled: userStatus === 1,
+      totalCount: formattedProfessionals.length
+    });
   } catch (error) {
     console.error('Ошибка при получении специалистов:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

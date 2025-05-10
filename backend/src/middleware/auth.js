@@ -28,4 +28,32 @@ export const verifyToken = (req, res, next) => {
     console.error('Ошибка при проверке токена:', error);
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
+};
+
+export const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    // Если токен не предоставлен, просто продолжаем выполнение
+    next();
+    return;
+  }
+  
+  const token = authHeader.split(' ')[1]; // Bearer TOKEN
+  if (!token) {
+    next();
+    return;
+  }
+  
+  try {
+    // Используем жестко заданный ключ, если переменная окружения не задана
+    const JWT_SECRET = process.env.JWT_SECRET || 'kinopro_super_secret_token_key_2024';
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
+    next();
+  } catch (error) {
+    // Если токен недействителен, просто продолжаем без идентификации пользователя
+    console.log('Необязательная авторизация: токен недействителен', error.message);
+    next();
+  }
 }; 
