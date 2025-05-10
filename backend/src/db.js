@@ -24,7 +24,8 @@ export async function initDb() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       first_name TEXT,
-      last_name TEXT
+      last_name TEXT,
+      profile_complete_status INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS cities (

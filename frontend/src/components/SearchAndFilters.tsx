@@ -316,6 +316,7 @@ interface SearchAndFiltersProps {
     onlyWithReviews: boolean;
   };
   onFilterChange: (filter: string, value: any) => void;
+  disabled?: boolean;
 }
 
 const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
@@ -323,6 +324,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
   onSearchChange,
   filters,
   onFilterChange,
+  disabled = false,
 }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
@@ -370,11 +372,11 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
   // Фильтрация профессий при изменении группы
   useEffect(() => {
     if (filters.professionGroup) {
-      const filtered = professions.filter(p => p.group_id === filters.professionGroup);
+      const filtered = professions.filter(p => Number(p.group_id) === Number(filters.professionGroup));
       setFilteredProfessions(filtered);
       
       // Сбросить выбранную профессию, если она не из текущей группы
-      const professionExists = filtered.some(p => p.id === filters.profession);
+      const professionExists = filtered.some(p => Number(p.id) === Number(filters.profession));
       if (!professionExists) {
         onFilterChange('profession', '');
       }
@@ -385,7 +387,9 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
   }, [filters.professionGroup, professions]);
 
   const toggleFilters = () => {
-    setShowFilters(!showFilters);
+    if (!disabled) {
+      setShowFilters(!showFilters);
+    }
   };
 
   const handleRatingChange = (event: Event, newValue: number | number[]) => {
@@ -440,15 +444,19 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           onClick={toggleFilters}
           sx={{
             textTransform: 'none',
-            color: 'text.secondary',
-            '&:hover': { bgcolor: 'transparent', color: 'primary.main' },
+            color: disabled ? 'text.disabled' : 'text.secondary',
+            '&:hover': { 
+              bgcolor: 'transparent', 
+              color: disabled ? 'text.disabled' : 'primary.main' 
+            },
           }}
+          disabled={disabled}
         >
-          Фильтры
+          Фильтры {disabled && '(недоступны)'}
         </Button>
       </Box>
 
-      <Collapse in={showFilters}>
+      <Collapse in={showFilters && !disabled}>
         <Box sx={{ 
           display: 'flex', 
           flexWrap: 'wrap', 
@@ -457,7 +465,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           alignItems: 'flex-start'
         }}>
           <Box sx={{ minWidth: '180px', flexGrow: 1, maxWidth: '250px' }}>
-            <FormControl size="small" sx={{ width: '100%' }}>
+            <FormControl size="small" sx={{ width: '100%' }} disabled={disabled}>
               <InputLabel>Группа профессий</InputLabel>
               <Select
                 value={filters.professionGroup}
@@ -487,7 +495,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           </Box>
           
           <Box sx={{ minWidth: '180px', flexGrow: 1, maxWidth: '250px' }}>
-            <FormControl size="small" disabled={!filters.professionGroup} sx={{ width: '100%' }}>
+            <FormControl size="small" disabled={!filters.professionGroup || disabled} sx={{ width: '100%' }}>
               <InputLabel>Профессия</InputLabel>
               <Select
                 value={filters.profession}
@@ -517,7 +525,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           </Box>
 
           <Box sx={{ minWidth: '150px', flexGrow: 1, maxWidth: '220px' }}>
-            <FormControl size="small" sx={{ width: '100%' }}>
+            <FormControl size="small" sx={{ width: '100%' }} disabled={disabled}>
               <InputLabel>Город</InputLabel>
               <Select
                 value={filters.location}
@@ -547,7 +555,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           </Box>
 
           <Box sx={{ minWidth: '150px', flexGrow: 1, maxWidth: '200px' }}>
-            <FormControl size="small" sx={{ width: '100%' }}>
+            <FormControl size="small" sx={{ width: '100%' }} disabled={disabled}>
               <InputLabel>Опыт работы</InputLabel>
               <Select
                 value={filters.experience}
@@ -601,6 +609,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
                     height: 8,
                   }
                 }}
+                disabled={disabled}
               />
             </Box>
           </Box>
@@ -617,6 +626,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
                       color: 'primary.main',
                     }
                   }}
+                  disabled={disabled}
                 />
               }
               label="Только с фото"
@@ -637,6 +647,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
                       color: 'primary.main',
                     }
                   }}
+                  disabled={disabled}
                 />
               }
               label="Только с отзывами"
