@@ -12,7 +12,7 @@ router.get('/profile', verifyToken, async (req, res) => {
     const db = await getDb();
     
     // Получаем данные пользователя
-    const user = await db.get('SELECT id, email, first_name, last_name FROM users WHERE id = ?', userId);
+    const user = await db.get('SELECT id, email, first_name, last_name, profile_complete_status FROM users WHERE id = ?', userId);
     
     if (!user) {
       return res.status(404).json({ error: 'Пользователь не найден' });
@@ -54,6 +54,7 @@ router.get('/profile', verifyToken, async (req, res) => {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
+      profileCompleteStatus: user.profile_complete_status,
       resume: resume ? {
         id: resume.id,
         // Используем оба варианта имен полей для совместимости

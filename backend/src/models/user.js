@@ -27,10 +27,10 @@ export async function createUser(email, passwordHash, firstName = '', lastName =
     }
     
     const result = await db.run(
-      'INSERT INTO users (email, password_hash, first_name, last_name) VALUES (?, ?, ?, ?)',
-      [email, passwordHash, firstName, lastName]
+      'INSERT INTO users (email, password_hash, first_name, last_name, profile_complete_status) VALUES (?, ?, ?, ?, ?)',
+      [email, passwordHash, firstName, lastName, 0]
     );
-    return { id: result.lastID, email, firstName, lastName };
+    return { id: result.lastID, email, firstName, lastName, profileCompleteStatus: 0 };
   } catch (error) {
     console.error('Ошибка при создании пользователя:', error);
     throw error;
@@ -71,6 +71,48 @@ export async function updateUserNames(userId, firstName, lastName) {
     };
   } catch (error) {
     console.error('Ошибка при обновлении имени пользователя:', error);
+    throw error;
+  }
+}
+
+export async function updateProfileStatus(userId, status) {
+  try {
+    const db = await getDb();
+    
+    // Получаем текущие данные пользователя перед обновлением
+    const user = await db.get('SELECT * FROM users WHERE id = ?', userId);
+    if (!user) {
+      throw new Error(`Пользователь с ID ${userId} не найден`);
+    }
+    
+    const result = await db.run(
+      'UPDATE users SET profile_complete_status = ? WHERE id = ?',
+      [status, userId]
+    );
+    
+    if (result.changes === 0) {
+      throw new Error(`Не удалось обновить статус пользователя с ID ${userId}`);
+    }
+    
+    return { success: true, userId, profileCompleteStatus: status };
+  } catch (error) {
+    console.error('Ошибка при обновлении статуса пользователя:', error);
+    throw error;
+  }
+}
+
+export async function getUserProfileStatus(userId) {
+  try {
+    const db = await getDb();
+    const user = await db.get('SELECT profile_complete_status FROM users WHERE id = ?', [userId]);
+    
+    if (!user) {
+      throw new Error(`Пользователь с ID ${userId} не найден`);
+    }
+    
+    return user.profile_complete_status;
+  } catch (error) {
+    console.error('Ошибка при получении статуса профиля пользователя:', error);
     throw error;
   }
 }
