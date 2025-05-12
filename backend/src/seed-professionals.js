@@ -1,5 +1,6 @@
 import { getDb } from './db.js';
 import bcrypt from 'bcryptjs';
+import { createUser } from './models/user.js';
 
 // Массив с данными для специалистов
 const professionals = [
@@ -342,13 +343,16 @@ async function createProfessional(db, professional) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(professional.password, salt);
     
-    // Создаем пользователя
-    const userResult = await db.run(
-      'INSERT INTO users (email, password_hash, first_name, last_name) VALUES (?, ?, ?, ?)',
-      [professional.email, passwordHash, professional.firstName, professional.lastName]
+    // Создаем пользователя, используя существующую функцию из models/user.js
+    const user = await createUser(
+      professional.email, 
+      passwordHash, 
+      professional.firstName, 
+      professional.lastName
     );
     
-    const userId = userResult.lastID;
+    // Получаем ID созданного пользователя
+    const userId = user.id;
     
     // Находим ID профессии
     const professionData = await db.get(

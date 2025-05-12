@@ -93,6 +93,54 @@ const ProfilePage: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Функция для обработки данных резюме пользователя
+  const processResumeData = (resumeData: any, professionsData: Profession[]) => {
+    console.log('Обработка резюме пользователя:', resumeData);
+    setExistingResume(resumeData);
+    setIsEditMode(true);
+    
+    // Определяем ID профессии из разных возможных полей
+    const profId = resumeData.professionId || resumeData.professions_id;
+    console.log('ID профессии из резюме:', profId);
+    
+    if (profId) {
+      setProfessionId(profId);
+      
+      // Находим профессию по ID
+      const profession = professionsData.find((p: Profession) => p.id === profId);
+      console.log('Найдена профессия:', profession);
+      
+      if (profession) {
+        // Устанавливаем группу профессии
+        console.log('Устанавливаем группу профессии:', profession.group_id);
+        setProfessionGroupId(profession.group_id);
+        
+        // Фильтруем профессии по группе
+        const filtered = professionsData.filter((p: Profession) => p.group_id === profession.group_id);
+        console.log('Отфильтрованные профессии для группы:', filtered);
+        setFilteredProfessions(filtered);
+      } else {
+        console.warn('Профессия с ID', profId, 'не найдена в списке профессий');
+      }
+    }
+    
+    // Определяем ID города
+    const cityIdValue = resumeData.cityId || resumeData.city_id;
+    if (cityIdValue) {
+      setCityId(cityIdValue);
+    }
+    
+    // Устанавливаем прочие поля
+    setBiography(resumeData.biography || '');
+    setMediaUrl(resumeData.mediaUrl || resumeData.media_url || '');
+    
+    // Устанавливаем опыт работы
+    const expYears = resumeData.experienceYears || resumeData.experience_years;
+    if (expYears) {
+      setExperience(expYears);
+    }
+  };
+
   // Загрузка данных для селекторов и существующего резюме
   useEffect(() => {
     const fetchData = async () => {
@@ -123,50 +171,7 @@ const ProfilePage: React.FC = () => {
         
         // Обработка резюме
         if (profileData.resume) {
-          console.log('Резюме пользователя:', profileData.resume);
-          setExistingResume(profileData.resume);
-          setIsEditMode(true);
-          
-          // Определяем ID профессии из разных возможных полей
-          const profId = profileData.resume.professionId || profileData.resume.professions_id;
-          console.log('ID профессии из резюме:', profId);
-          
-          if (profId) {
-            setProfessionId(profId);
-            
-            // Находим профессию по ID
-            const profession = professionsData.find((p: Profession) => p.id === profId);
-            console.log('Найдена профессия:', profession);
-            
-            if (profession) {
-              // Устанавливаем группу профессии
-              console.log('Устанавливаем группу профессии:', profession.group_id);
-              setProfessionGroupId(profession.group_id);
-              
-              // Фильтруем профессии по группе
-              const filtered = professionsData.filter((p: Profession) => p.group_id === profession.group_id);
-              console.log('Отфильтрованные профессии для группы:', filtered);
-              setFilteredProfessions(filtered);
-            } else {
-              console.warn('Профессия с ID', profId, 'не найдена в списке профессий');
-            }
-          }
-          
-          // Определяем ID города
-          const cityIdValue = profileData.resume.cityId || profileData.resume.city_id;
-          if (cityIdValue) {
-            setCityId(cityIdValue);
-          }
-          
-          // Устанавливаем прочие поля
-          setBiography(profileData.resume.biography || '');
-          setMediaUrl(profileData.resume.mediaUrl || profileData.resume.media_url || '');
-          
-          // Устанавливаем опыт работы
-          const expYears = profileData.resume.experienceYears || profileData.resume.experience_years;
-          if (expYears) {
-            setExperience(expYears);
-          }
+          processResumeData(profileData.resume, professionsData);
         }
       } catch (err) {
         console.error('Ошибка при загрузке данных:', err);
@@ -283,47 +288,7 @@ const ProfilePage: React.FC = () => {
       setLastName(profileData.lastName || '');
       
       if (profileData.resume) {
-        console.log('Обновленное резюме:', profileData.resume);
-        setExistingResume(profileData.resume);
-        setIsEditMode(true);
-        
-        // Определяем ID профессии
-        const profId = profileData.resume.professionId || profileData.resume.professions_id;
-        console.log('ID профессии из обновленного резюме:', profId);
-        
-        if (profId) {
-          setProfessionId(profId);
-          
-          // Находим профессию по ID
-          const profession = professions.find((p: Profession) => p.id === profId);
-          console.log('Найдена профессия:', profession);
-          
-          if (profession) {
-            // Устанавливаем группу профессии
-            console.log('Устанавливаем группу профессии:', profession.group_id);
-            setProfessionGroupId(profession.group_id);
-            
-            // Фильтруем профессии по группе
-            const filtered = professions.filter((p: Profession) => p.group_id === profession.group_id);
-            setFilteredProfessions(filtered);
-          }
-        }
-        
-        // Определяем ID города
-        const cityIdValue = profileData.resume.cityId || profileData.resume.city_id;
-        if (cityIdValue) {
-          setCityId(cityIdValue);
-        }
-        
-        // Устанавливаем прочие поля
-        setBiography(profileData.resume.biography || '');
-        setMediaUrl(profileData.resume.mediaUrl || profileData.resume.media_url || '');
-        
-        // Устанавливаем опыт работы
-        const expYears = profileData.resume.experienceYears || profileData.resume.experience_years;
-        if (expYears) {
-          setExperience(expYears);
-        }
+        processResumeData(profileData.resume, professions);
       }
     } catch (err) {
       console.error('Ошибка при обновлении профиля:', err);
