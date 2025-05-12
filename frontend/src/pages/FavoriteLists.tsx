@@ -22,9 +22,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useAuth } from '../context/AuthContext';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 
 interface FavoriteList {
@@ -39,6 +40,7 @@ interface FavoriteList {
 
 const FavoriteLists: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [lists, setLists] = useState<FavoriteList[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -203,7 +205,14 @@ const FavoriteLists: React.FC = () => {
       <Header />
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton 
+              onClick={() => navigate('/')} 
+              sx={{ mr: 1 }}
+              aria-label="На главную"
+            >
+              <ArrowBackIcon />
+            </IconButton>
             <Typography variant="h4" component="h1">
               Списки избранного
             </Typography>

@@ -162,6 +162,13 @@ const FavoriteListDetail: React.FC = () => {
           >
             <ArrowBackIcon />
           </IconButton>
+          <IconButton 
+            onClick={() => navigate('/')} 
+            sx={{ mr: 2 }}
+            aria-label="На главную"
+          >
+            <ArrowBackIcon />
+          </IconButton>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
             {loading ? 'Загрузка...' : list?.title}
           </Typography>

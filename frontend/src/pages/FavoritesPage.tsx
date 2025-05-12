@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, CircularProgress, Alert, Button } from '@mui/material';
+import { Container, Box, Typography, CircularProgress, Alert, Button, IconButton } from '@mui/material';
 import Header from '../components/Header';
 import ProfessionalsList from '../components/ProfessionalsList';
 import { useFavorites } from '../context/FavoritesContext';
 import { Professional } from '../components/ProfessionalCard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
-import { Link as RouterLink } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const FavoritesPage: React.FC = () => {
   const { favorites } = useFavorites();
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -48,13 +50,22 @@ const FavoritesPage: React.FC = () => {
       <Header />
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{ fontWeight: 700, color: 'primary.main' }}
-          >
-            Избранные специалисты
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton 
+              onClick={() => navigate('/')} 
+              sx={{ mr: 1 }}
+              aria-label="На главную"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{ fontWeight: 700, color: 'primary.main' }}
+            >
+              Избранные специалисты
+            </Typography>
+          </Box>
           
           {isAuthenticated && (
             <Button

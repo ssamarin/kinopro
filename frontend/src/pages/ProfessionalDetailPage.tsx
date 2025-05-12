@@ -11,6 +11,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useFavorites } from '../context/FavoritesContext';
 import { Professional } from '../components/ProfessionalCard';
 import ReviewForm from '../components/ReviewForm';
+import FavoriteListModal from '../components/FavoriteListModal';
 
 // Обновим интерфейс для профессионала
 interface ProfessionalDetail {
@@ -144,14 +145,24 @@ const ReviewCard = styled('div')(({ theme }) => ({
   marginRight: theme.spacing(2),
 }));
 
-// Типы для чата
-interface ChatMessage { text: string; isMe: boolean; }
+// Определим правильные типы для чата
 interface Chat {
   id: number;
-  name: string;
-  avatar: string;
+  userId: number;
+  userName: string;
+  userPhoto: string | null;
   lastMessage: string;
-  messages: ChatMessage[];
+  lastMessageTime: string;
+  unreadCount: number;
+  messages: Message[];
+}
+
+interface Message {
+  id: number;
+  sender: 'user' | 'professional';
+  text: string;
+  timestamp: string;
+  isRead: boolean;
 }
 
 type ChatWindowProps = {
@@ -213,13 +224,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ open, onClose, chats, activeCha
                 }}
                 onClick={() => setActiveChatId(chat.id)}
                 tabIndex={0}
-                aria-label={`Открыть чат с ${chat.name}`}
+                aria-label={`Открыть чат с ${chat.userName}`}
               >
                 <Box sx={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', bgcolor: 'grey.800', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 18 }}>
-                  {chat.avatar ? <img src={chat.avatar} alt={chat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : chat.name[0]}
+                  {chat.userPhoto ? <img src={chat.userPhoto} alt={chat.userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : chat.userName[0]}
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography noWrap sx={{ fontWeight: 'inherit', fontSize: 15 }}>{chat.name}</Typography>
+                  <Typography noWrap sx={{ fontWeight: 'inherit', fontSize: 15 }}>{chat.userName}</Typography>
                   <Typography noWrap sx={{ fontSize: 13, color: chat.id === activeChatId ? 'white' : 'text.secondary' }}>{chat.lastMessage}</Typography>
                 </Box>
               </Box>
@@ -231,9 +242,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ open, onClose, chats, activeCha
           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', bgcolor: 'grey.800', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
-                {activeChat?.avatar ? <img src={activeChat.avatar} alt={activeChat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : activeChat?.name[0]}
+                {activeChat?.userPhoto ? <img src={activeChat.userPhoto} alt={activeChat.userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : activeChat?.userName[0]}
               </Box>
-              <Typography sx={{ fontWeight: 'bold', fontSize: 16 }}>{activeChat?.name}</Typography>
+              <Typography sx={{ fontWeight: 'bold', fontSize: 16 }}>{activeChat?.userName}</Typography>
             </Box>
             <IconButton onClick={onClose} aria-label="Закрыть чат" tabIndex={0}><CloseIcon /></IconButton>
           </Box>
@@ -245,10 +256,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ open, onClose, chats, activeCha
               <Box
                 key={idx}
                 sx={{
-                  alignSelf: msg.isMe ? 'flex-end' : 'flex-start',
-                  bgcolor: msg.isMe ? 'primary.main' : 'grey.800',
-                  color: msg.isMe ? 'white' : 'grey.100',
-                  borderRadius: msg.isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                  alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                  bgcolor: msg.sender === 'user' ? 'primary.main' : 'grey.800',
+                  color: msg.sender === 'user' ? 'white' : 'grey.100',
+                  borderRadius: msg.sender === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                   px: 2,
                   py: 1,
                   maxWidth: '80%',
@@ -282,46 +293,57 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ open, onClose, chats, activeCha
 const mockChats: Chat[] = [
   {
     id: 1,
-    name: 'Тимур Бабенко',
-    avatar: 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg',
+    userId: 1,
+    userName: 'Тимур Бабенко',
+    userPhoto: 'https://images2.novochag.ru/upload/img_cache/358/358a335d28cb3ebefa84f477c1c0e05e_cropped_666x781.jpg',
     lastMessage: 'Здравствуйте! Чем могу помочь?',
+    lastMessageTime: '12:00',
+    unreadCount: 0,
     messages: [
-      { text: 'Здравствуйте! Чем могу помочь?', isMe: false },
+      { id: 1, sender: 'professional', text: 'Здравствуйте! Чем могу помочь?', timestamp: '12:00', isRead: true },
     ],
   },
   {
     id: 2,
-    name: 'Анна Сидорова',
-    avatar: '',
+    userId: 2,
+    userName: 'Анна Сидорова',
+    userPhoto: '',
     lastMessage: 'Спасибо за информацию!',
+    lastMessageTime: '13:00',
+    unreadCount: 0,
     messages: [
-      { text: 'Добрый день! Интересует съёмка рекламы.', isMe: true },
-      { text: 'Спасибо за информацию!', isMe: false },
+      { id: 2, sender: 'user', text: 'Добрый день! Интересует съёмка рекламы.', timestamp: '13:00', isRead: true },
+      { id: 3, sender: 'professional', text: 'Спасибо за информацию!', timestamp: '13:05', isRead: true },
     ],
   },
   {
     id: 3,
-    name: 'Алексей Кузнецов',
-    avatar: '',
+    userId: 3,
+    userName: 'Алексей Кузнецов',
+    userPhoto: '',
     lastMessage: 'Ок, договорились!',
+    lastMessageTime: '14:00',
+    unreadCount: 0,
     messages: [
-      { text: 'Ок, договорились!', isMe: false },
+      { id: 4, sender: 'professional', text: 'Ок, договорились!', timestamp: '14:00', isRead: true },
     ],
   },
 ];
 
 const ProfessionalDetailPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [professional, setProfessional] = useState<ProfessionalDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>(mockChats);
   const [activeChatId, setActiveChatId] = useState<number>(mockChats[0].id);
   const [inputValue, setInputValue] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [isAddingReview, setIsAddingReview] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -376,7 +398,7 @@ const ProfessionalDetailPage = () => {
     if (!text.trim()) return;
     setChats(prevChats => prevChats.map(chat =>
       chat.id === activeChatId
-        ? { ...chat, messages: [...chat.messages, { text, isMe: true }], lastMessage: text }
+        ? { ...chat, messages: [...chat.messages, { id: Date.now(), sender: 'user', text, timestamp: new Date().toISOString(), isRead: false }], lastMessage: text }
         : chat
     ));
     setInputValue('');
@@ -429,6 +451,52 @@ const ProfessionalDetailPage = () => {
         console.error('Ошибка при обновлении данных:', error);
       } finally {
         setLoading(false);
+      }
+    }
+  };
+
+  const handleFavoriteClick = async () => {
+    if (professional) {
+      const wasInFavorites = isFavorite(professional.id);
+      
+      // Сначала добавляем/удаляем из избранного
+      toggleFavorite(professional.id);
+      
+      // Если профессионал НЕ был в избранном (т.е. мы его добавляем), показываем модальное окно
+      if (!wasInFavorites) {
+        setIsModalOpen(true);
+      } else {
+        // Если профессионал БЫЛ в избранном (т.е. мы его удаляем), удаляем его из всех списков
+        try {
+          // Получим токен из localStorage
+          const token = localStorage.getItem('token');
+          if (token) {
+            // Сначала получаем все списки пользователя
+            const listsResponse = await fetch('/api/participants', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (listsResponse.ok) {
+              const lists = await listsResponse.json();
+              
+              // Для каждого списка, в котором есть этот профессионал, удаляем его
+              for (const list of lists) {
+                if (list.list_of_ids.includes(professional.id)) {
+                  await fetch(`/api/participants/${list.id}/professionals/${professional.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при удалении профессионала из списков:', error);
+        }
       }
     }
   };
@@ -589,7 +657,7 @@ const ProfessionalDetailPage = () => {
             Написать
           </Button>
           <IconButton 
-            onClick={() => toggleFavorite(professional.id)}
+            onClick={handleFavoriteClick}
             sx={{ 
               p: 1.5, 
               bgcolor: isFavorite(professional.id) ? 'error.main' : 'action.hover',
@@ -613,6 +681,15 @@ const ProfessionalDetailPage = () => {
         inputValue={inputValue}
         setInputValue={setInputValue}
       />
+      
+      {professional && (
+        <FavoriteListModal
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          professionalId={professional.id}
+          professionalName={professional.name}
+        />
+      )}
     </Box>
   );
 };
