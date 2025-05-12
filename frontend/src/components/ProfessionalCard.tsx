@@ -132,8 +132,48 @@ const ProfessionalCard: React.FC<{ professional: Professional }> = ({ profession
     navigate(`/professionals/${professional.id}`);
   };
 
-  const handleFavoriteClick = () => {
-    setIsModalOpen(true);
+  const handleFavoriteClick = async () => {
+    const wasInFavorites = isFavorite(professional.id);
+    
+    // Сначала добавляем/удаляем из избранного
+    toggleFavorite(professional.id);
+    
+    // Если профессионал НЕ был в избранном (т.е. мы его добавляем), показываем модальное окно
+    if (!wasInFavorites) {
+      setIsModalOpen(true);
+    } else {
+      // Если профессионал БЫЛ в избранном (т.е. мы его удаляем), удаляем его из всех списков
+      try {
+        // Получим токен из localStorage
+        const token = localStorage.getItem('token');
+        if (token) {
+          // Сначала получаем все списки пользователя
+          const listsResponse = await fetch('/api/participants', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (listsResponse.ok) {
+            const lists = await listsResponse.json();
+            
+            // Для каждого списка, в котором есть этот профессионал, удаляем его
+            for (const list of lists) {
+              if (list.list_of_ids.includes(professional.id)) {
+                await fetch(`/api/participants/${list.id}/professionals/${professional.id}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка при удалении профессионала из списков:', error);
+      }
+    }
   };
 
   // Определяем цвет для профессии или используем цвет группы

@@ -20,109 +20,65 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   });
 };
 
-// Получение профиля пользователя
-export const fetchUserProfile = async () => {
+// Универсальная функция для выполнения API-запросов
+export const apiRequest = async <T>(url: string, options: RequestInit = {}, errorMessage?: string): Promise<T> => {
   try {
-    const response = await fetchWithAuth('/api/users/profile');
+    // Проверяем наличие токена для авторизации
+    const token = localStorage.getItem('token');
+    const isAuthRequest = token && !url.includes('/login') && !url.includes('/register');
+    
+    // Выбираем соответствующий метод запроса
+    const response = isAuthRequest
+      ? await fetchWithAuth(url, options)
+      : await fetch(url, options);
     
     if (!response.ok) {
-      throw new Error('Не удалось загрузить данные профиля');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorMessage || `Ошибка запроса: ${response.status}`);
     }
     
     return await response.json();
   } catch (error) {
-    console.error('Ошибка при получении профиля:', error);
+    console.error(`Ошибка при запросе ${url}:`, error);
     throw error;
   }
+};
+
+// Получение профиля пользователя
+export const fetchUserProfile = async () => {
+  return apiRequest('/api/users/profile', {}, 'Не удалось загрузить данные профиля');
 };
 
 // Обновление профиля пользователя
 export const updateUserProfile = async (data: { firstName: string; lastName: string }) => {
-  try {
-    const response = await fetchWithAuth('/api/users/profile', {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Ошибка при обновлении профиля');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Ошибка при обновлении профиля:', error);
-    throw error;
-  }
+  return apiRequest('/api/users/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }, 'Ошибка при обновлении профиля');
 };
 
 // Получение списка городов
 export const fetchCities = async () => {
-  try {
-    const response = await fetch('/api/cities');
-    
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить список городов');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Ошибка при получении городов:', error);
-    throw error;
-  }
+  return apiRequest('/api/cities', {}, 'Не удалось загрузить список городов');
 };
 
 // Получение списка групп профессий
 export const fetchProfessionGroups = async () => {
-  try {
-    const response = await fetch('/api/profession-groups');
-    
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить группы профессий');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Ошибка при получении групп профессий:', error);
-    throw error;
-  }
+  return apiRequest('/api/profession-groups', {}, 'Не удалось загрузить группы профессий');
 };
 
 // Получение списка профессий
 export const fetchProfessions = async () => {
-  try {
-    const response = await fetch('/api/professions');
-    
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить профессии');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Ошибка при получении профессий:', error);
-    throw error;
-  }
+  return apiRequest('/api/professions', {}, 'Не удалось загрузить профессии');
 };
 
 // Сохранение резюме
 export const saveResume = async (resumeData: any, isEditMode: boolean, resumeId?: number) => {
-  try {
-    const url = isEditMode ? `/api/resumes/${resumeId}` : '/api/resumes';
-    const method = isEditMode ? 'PUT' : 'POST';
-    
-    const response = await fetchWithAuth(url, {
-      method,
-      body: JSON.stringify(resumeData)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Ошибка при сохранении данных');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Ошибка при сохранении резюме:', error);
-    throw error;
-  }
+  const url = isEditMode ? `/api/resumes/${resumeId}` : '/api/resumes';
+  const method = isEditMode ? 'PUT' : 'POST';
+  
+  return apiRequest(url, {
+    method,
+    body: JSON.stringify(resumeData)
+  }, 'Ошибка при сохранении данных');
 }; 

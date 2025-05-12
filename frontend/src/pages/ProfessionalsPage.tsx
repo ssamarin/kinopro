@@ -80,54 +80,88 @@ const ProfessionalsPage: React.FC = () => {
     }));
   };
 
-  const filteredProfessionals = useMemo(() => {
-    return professionals.filter((pro) => {
-      // Поиск по имени или профессии
-      const search = searchQuery.trim().toLowerCase();
-      if (search && !(
-        pro.name.toLowerCase().includes(search) ||
-        pro.profession.toLowerCase().includes(search)
-      )) return false;
-      
-      // Фильтр по группе профессий
-      if (filters.professionGroup && Number(pro.professionGroupId) !== Number(filters.professionGroup)) return false;
-      
-      // Фильтр по профессии
-      if (filters.profession && Number(pro.professionId) !== Number(filters.profession)) return false;
-      
-      // Фильтр по городу
-      if (filters.location && Number(pro.cityId) !== Number(filters.location)) return false;
-      
-      // Фильтр по опыту (преобразуем строку вида "X лет/года" в число)
-      if (filters.experience) {
-        const minExperience = parseInt(filters.experience as string);
-        const proExperience = parseInt(pro.experience.split(' ')[0]);
-        if (proExperience < minExperience) return false;
-      }
-      
-      // Фильтр по рейтингу
-      if (filters.ratingFrom) {
-        const minRating = Number(filters.ratingFrom);
-        // Если минимальный рейтинг > 0, исключаем карточки с null или 0 рейтингом
-        if (minRating > 0 && (pro.rating === null || pro.rating === 0)) {
-          return false;
-        }
-        // Проверяем нижнюю границу рейтинга (только для не-null значений)
-        if (pro.rating !== null && pro.rating < minRating) {
-          return false;
-        }
-      }
-      
-      // Проверяем верхнюю границу рейтинга
-      if (filters.ratingTo && pro.rating !== null && pro.rating > Number(filters.ratingTo)) {
+  // Разбиваем логику фильтрации на отдельные функции
+  const filterBySearchQuery = (pro: Professional, search: string) => {
+    if (!search) return true;
+    
+    return pro.name.toLowerCase().includes(search) || 
+           pro.profession.toLowerCase().includes(search);
+  };
+  
+  const filterByProfessionGroup = (pro: Professional, groupId: string) => {
+    if (!groupId) return true;
+    
+    return Number(pro.professionGroupId) === Number(groupId);
+  };
+  
+  const filterByProfession = (pro: Professional, professionId: string) => {
+    if (!professionId) return true;
+    
+    return Number(pro.professionId) === Number(professionId);
+  };
+  
+  const filterByLocation = (pro: Professional, cityId: string) => {
+    if (!cityId) return true;
+    
+    return Number(pro.cityId) === Number(cityId);
+  };
+  
+  const filterByExperience = (pro: Professional, minExperience: string) => {
+    if (!minExperience) return true;
+    
+    const minExp = parseInt(minExperience);
+    const proExp = parseInt(pro.experience.split(' ')[0]);
+    
+    return proExp >= minExp;
+  };
+  
+  const filterByRating = (pro: Professional, minRating: string, maxRating: string) => {
+    // Фильтр по минимальному рейтингу
+    if (minRating) {
+      const minValue = Number(minRating);
+      // Если минимальный рейтинг > 0, исключаем карточки с null или 0 рейтингом
+      if (minValue > 0 && (pro.rating === null || pro.rating === 0)) {
         return false;
       }
+      // Проверяем нижнюю границу рейтинга (только для не-null значений)
+      if (pro.rating !== null && pro.rating < minValue) {
+        return false;
+      }
+    }
+    
+    // Проверяем верхнюю границу рейтинга
+    if (maxRating && pro.rating !== null && pro.rating > Number(maxRating)) {
+      return false;
+    }
+    
+    return true;
+  };
+  
+  const filterByPhoto = (pro: Professional, onlyWithPhoto: boolean) => {
+    if (!onlyWithPhoto) return true;
+    
+    return !!pro.photo;
+  };
+  
+  const filterByFeedback = (pro: Professional, onlyWithReviews: boolean) => {
+    if (!onlyWithReviews) return true;
+    
+    return pro.hasFeedback;
+  };
+
+  const filteredProfessionals = useMemo(() => {
+    return professionals.filter((pro) => {
+      const search = searchQuery.trim().toLowerCase();
       
-      // Фильтр по фото
-      if (filters.onlyWithPhoto && !pro.photo) return false;
-      
-      // Фильтр по отзывам
-      if (filters.onlyWithReviews && !pro.hasFeedback) return false;
+      // Применяем все фильтры поочередно
+      if (!filterBySearchQuery(pro, search)) return false;
+      if (!filterByProfessionGroup(pro, filters.professionGroup)) return false;
+      if (!filterByProfession(pro, filters.profession)) return false;
+      if (!filterByLocation(pro, filters.location)) return false;
+      if (!filterByExperience(pro, filters.experience)) return false;
+      if (!filterByRating(pro, filters.ratingFrom, filters.ratingTo)) return false;
+      if (!filterByPhoto(pro, filters.onlyWithPhoto)) return false;
+      if (!filterByFeedback(pro, filters.onlyWithReviews)) return false;
       
       return true;
     });
